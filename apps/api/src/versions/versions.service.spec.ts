@@ -3,6 +3,21 @@ import { VersionsService } from './versions.service';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '@nestjs/common';
 
+jest.mock('fs', () => {
+  const originalFs = jest.requireActual('fs');
+  return {
+    ...originalFs,
+    existsSync: jest.fn().mockImplementation((path) => {
+      if (path.startsWith('/mock/')) return true;
+      return originalFs.existsSync(path);
+    }),
+    mkdirSync: jest.fn().mockImplementation((path, options) => {
+      if (path.startsWith('/mock/')) return;
+      return originalFs.mkdirSync(path, options);
+    }),
+  };
+});
+
 jest.mock('@shelby-protocol/sdk/node', () => ({
   ShelbyNodeClient: jest.fn().mockImplementation(() => ({
     upload: jest.fn(),

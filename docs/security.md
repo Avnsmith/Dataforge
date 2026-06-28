@@ -25,35 +25,38 @@ To prevent accidental credential leaks:
 
 ## 2. Secret Rotation Policy & Procedures
 
-All production credentials must be rotated immediately if exposed in chat transcripts, logs, or commit histories.
+All production credentials must be rotated immediately if exposed.
 
-### A. JWT_SECRET Rotation
-`JWT_SECRET` signs user session tokens. Rotating it invalidates all current user sessions, forcing users to re-login.
-
-1. Generate a new cryptographically secure 32-byte hex key:
+### A. JWT_SECRET Rotation (Automated)
+`JWT_SECRET` signs user session tokens.
+1. Run the silent rotation script:
    ```bash
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   node scratch/silent_rotate.js
    ```
-2. Update the `JWT_SECRET` variable on the Railway console for the `api` service.
-3. Railway will automatically redeploy the backend container with the new key.
+2. Railway will automatically redeploy the backend container with the new key.
 
-### B. Supabase Database Password Rotation
+### B. Supabase Database Password Rotation (Manual Action Required)
+Supabase database passwords can only be changed via the Supabase web dashboard.
 1. Go to the [Supabase Dashboard](https://supabase.com).
-2. Navigate to **Settings** -> **Database**.
-3. Under **Database password**, click **Reset database password** and copy the new password.
-4. Update `DATABASE_URL` and `DIRECT_URL` on Railway with the new password.
-   *Example:*
-   - `DATABASE_URL=postgresql://postgres.<project_id>:<new_password>@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true`
-   - `DIRECT_URL=postgresql://postgres.<project_id>:<new_password>@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres`
+2. Click on your project **DataForge**.
+3. In the left navigation bar, go to **Settings** (gear icon) -> **Database**.
+4. Scroll down to **Database password** and click **Reset database password**.
+5. Copy the newly generated password.
+6. derived connections: Update the `DATABASE_URL` (port 6543 pooled connection) and `DIRECT_URL` (port 5432 direct connection) on your Railway variables settings.
+7. Run migrations to verify:
+   ```bash
+   npm run db:migrate:deploy
+   ```
 
-### C. Upstash Redis Credentials Rotation
+### C. Upstash Redis Credentials Rotation (Manual Action Required)
+Upstash Redis credentials are changed via the Upstash dashboard.
 1. Go to the [Upstash Console](https://console.upstash.com).
-2. Select your Redis database.
-3. In the database details, scroll to **Credentials** and click **Reset Password**.
-4. Copy the new TLS URL (`rediss://...`).
-5. Update the `REDIS_URL` variable on Railway.
+2. Click on your Redis database.
+3. In the database details screen, scroll to **Credentials** and click **Reset Password**.
+4. Copy the new TLS connection string (`rediss://...`).
+5. Update `REDIS_URL` in the Railway environment variables.
 
-### D. Railway / Vercel CLI Tokens Rotation
-If a developer token is compromised:
-- **Railway:** Run `railway logout` and regenerate personal access tokens in your Railway account settings.
-- **Vercel:** Go to Vercel Dashboard -> **Account Settings** -> **Tokens**, revoke the active token, and run `vercel login` to create a fresh session.
+### D. Railway / Vercel CLI Tokens Rotation (Manual Action Required)
+If CLI session tokens are compromised:
+- **Railway:** Navigate to **Account Settings** -> **Tokens** on the Railway dashboard, revoke the active CLI token, and run `railway logout` followed by `railway login`.
+- **Vercel:** Navigate to Vercel Dashboard -> **Account Settings** -> **Tokens**, revoke the active token, and run `vercel login` to authorize a new session.

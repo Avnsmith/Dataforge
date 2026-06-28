@@ -29,13 +29,8 @@ The API uses a request ID middleware and a custom logging interceptor:
 ### Logging Interceptor
 - Intercepts requests and logs `method`, `url`, `statusCode`, `latency` (in ms), `requestId`, and `user` ID (truncated wallet address) in a structured format.
 - **Production Safety:** Sensitive credentials (`Authorization` header, cookies, database URLs, Redis passwords, private keys, uploaded file contents) are **never** logged.
-- **Error Stack Traces:** For 500+ Internal Server Errors, the full error stack trace is logged in the server console to allow debugging:
-  ```
-  [HTTP] GET /api/search 500 12ms | requestId=9ae19ec0-... user=anonymous error=Something went wrong
-  Error: Something went wrong
-      at AppController.search (...)
-  ```
-  For client-side errors (4xx), a lightweight warn log without a stack trace is outputted to keep server logs clean.
+- **Error Stack Traces:** For 500+ Internal Server Errors, the full error stack trace is logged in the server console to allow debugging.
+- For client-side errors (4xx), a lightweight warn log without a stack trace is outputted to keep server logs clean.
 
 ---
 

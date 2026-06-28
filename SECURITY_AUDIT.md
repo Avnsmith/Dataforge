@@ -13,10 +13,10 @@ All credentials previously displayed in chats or logs have been marked as compro
 | `JWT_SECRET` | **ROTATED** | Silently generated new 32-byte hex string; updated via Railway CLI. |
 | `SHELBY_PRIVATE_KEY` | **ROTATED** | Silently generated new Ed25519 pair; updated via Railway CLI. |
 | `SHELBY_ACCOUNT` | **ROTATED** | Silently generated new address; updated via Railway CLI. |
-| `Railway CLI Token` | **MANUAL ACTION REQUIRED** | Users must revoke active CLI tokens via Railway dashboard if shared. |
-| `Vercel CLI Token` | **MANUAL ACTION REQUIRED** | Users must revoke active CLI tokens via Vercel dashboard if shared. |
-| `Upstash Redis Password` | **MANUAL ACTION REQUIRED** | Reset database credentials in the Upstash console if exposed. |
-| `Supabase DB Password` | **MANUAL ACTION REQUIRED** | Reset database password in Supabase database settings if exposed. |
+| `Railway CLI Token` | **MANUAL ACTION REQUIRED** | Users must revoke active CLI tokens via Railway dashboard. |
+| `Vercel CLI Token` | **MANUAL ACTION REQUIRED** | Users must revoke active CLI tokens via Vercel dashboard. |
+| `Upstash Redis Password` | **MANUAL ACTION REQUIRED** | Reset database credentials in the Upstash console. |
+| `Supabase DB Password` | **MANUAL ACTION REQUIRED** | Reset database password in Supabase database settings. |
 
 *No credential values are printed or listed in this report to prevent accidental leak.*
 
