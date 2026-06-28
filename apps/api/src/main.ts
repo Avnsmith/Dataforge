@@ -55,10 +55,47 @@ async function bootstrap() {
     next();
   });
 
-  // Strict CORS — use FRONTEND_ORIGIN env var in production
-  const frontendOrigin = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+  // Strict CORS — dynamically parse FRONTEND_ORIGIN and ADDITIONAL_FRONTEND_ORIGINS
+  const allowedOrigins = new Set<string>();
+  const addOrigin = (o: string) => {
+    if (!o) return;
+    const clean = o.trim().replace(/\/$/, '');
+    if (clean) allowedOrigins.add(clean);
+  };
+
+  if (process.env.FRONTEND_ORIGIN) {
+    addOrigin(process.env.FRONTEND_ORIGIN);
+  } else {
+    addOrigin('http://localhost:3000');
+  }
+
+  if (process.env.ADDITIONAL_FRONTEND_ORIGINS) {
+    process.env.ADDITIONAL_FRONTEND_ORIGINS.split(',')
+      .forEach(o => addOrigin(o));
+  }
+
+  // Always allow localhost in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    addOrigin('http://localhost:3000');
+    addOrigin('http://127.0.0.1:3000');
+  }
+
+  Logger.log(`Allowed CORS origins: ${Array.from(allowedOrigins).join(', ')}`);
+
   app.enableCors({
-    origin: frontendOrigin,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      const cleanOrigin = origin.trim().replace(/\/$/, '');
+      if (allowedOrigins.has(cleanOrigin)) {
+        callback(null, true);
+      } else {
+        Logger.warn(`CORS blocked for unauthorized origin: ${origin}`);
+        callback(new Error(`Origin ${origin} not allowed by CORS`), false);
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     exposedHeaders: ['x-request-id'],
