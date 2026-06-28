@@ -121,5 +121,13 @@ export class AppController {
       version: process.env.npm_package_version || '1.0.0',
     };
   }
+
+  @Get('sentry-test')
+  sentryTest() {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Forbidden: Sentry test endpoint is disabled in production environment');
+    }
+    throw new Error('Sentry test error generated successfully at ' + new Date().toISOString());
+  }
 }
 

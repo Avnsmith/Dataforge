@@ -47,9 +47,16 @@ export class LoggingInterceptor implements NestInterceptor {
       catchError((err) => {
         const latency = Date.now() - start;
         const statusCode = err.status || 500;
-        this.logger.warn(
-          `${method} ${url} ${statusCode} ${latency}ms | requestId=${requestId} user=${userId} error=${err.message}`
-        );
+        const stackStr = err.stack ? `\n${err.stack}` : '';
+        if (statusCode >= 500) {
+          this.logger.error(
+            `${method} ${url} ${statusCode} ${latency}ms | requestId=${requestId} user=${userId} error=${err.message}${stackStr}`
+          );
+        } else {
+          this.logger.warn(
+            `${method} ${url} ${statusCode} ${latency}ms | requestId=${requestId} user=${userId} error=${err.message}`
+          );
+        }
         return throwError(() => err);
       }),
     );

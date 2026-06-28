@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -16,6 +17,11 @@ import { AppController } from './app.controller';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    // Apply SentryGlobalFilter globally to report unhandled exceptions
+    {
+      provide: APP_FILTER,
+      useClass: SentryGlobalFilter,
     },
   ],
   imports: [

@@ -1,3 +1,4 @@
+import './instrument';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
@@ -118,18 +119,7 @@ async function bootstrap() {
   // Global Logging Interceptor — structured request logs
   app.useGlobalInterceptors(new LoggingInterceptor());
 
-  // Optional Sentry error tracking — disabled if SENTRY_DSN is empty
-  const sentryDsn = process.env.SENTRY_DSN;
-  if (sentryDsn) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const Sentry = require('@sentry/node');
-      Sentry.init({ dsn: sentryDsn, tracesSampleRate: 0.1 });
-      Logger.log('Sentry error tracking initialized');
-    } catch (e) {
-      Logger.warn('Sentry DSN set but @sentry/node not installed — tracking disabled');
-    }
-  }
+
 
   const port = process.env.PORT || 4000;
   await app.listen(port, '0.0.0.0');

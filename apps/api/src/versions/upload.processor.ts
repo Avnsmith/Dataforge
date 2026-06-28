@@ -1,5 +1,6 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
+import * as Sentry from '@sentry/nestjs';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { prisma } from '@dataforge/db';
@@ -273,6 +274,7 @@ Licensed under ${version.dataset.license || 'proprietary'} rules.
       const attemptsMade = job.attemptsMade;
       const maxAttempts = job.opts.attempts || 1;
       const isFinalAttempt = attemptsMade + 1 >= maxAttempts;
+      Sentry.captureException(error);
       this.logger.error(
         `[JOB ${jobId}] FAILED publish | versionId=${versionId} | attempt=${attempt}/${maxAttempts} | final=${isFinalAttempt} | reason=${error.message}`,
         error.stack

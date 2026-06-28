@@ -51,29 +51,24 @@ then starts the compiled API: `node dist/main.js`
 
 Set these in the Railway dashboard under **api → Variables → production**.
 
-| Variable | Value |
-|---|---|
+| Variable | Value | Description |
+|---|---|---|
 | `DATABASE_URL` | Supabase pooled connection (`port 6543?pgbouncer=true`) |
 | `DIRECT_URL` | Supabase direct connection (`port 5432`) |
 | `REDIS_URL` | Upstash `rediss://...` TLS connection string |
 | `JWT_SECRET` | Strong random secret (min 32 chars) |
 | `NODE_ENV` | `production` |
-| `FRONTEND_ORIGIN` | Vercel frontend URL (for CORS) |
+| `FRONTEND_ORIGIN` | Vercel production URL (for CORS validation) |
+| `ADDITIONAL_FRONTEND_ORIGINS` | Comma-separated Vercel preview/mock URLs |
 | `SHELBY_MODE` | `mock` (or `live` when real credentials available) |
 | `SHELBY_NETWORK` | `testnet` |
 | `SHELBY_EXPLORER_BASE_URL` | `https://explorer.shelby.xyz/testnet` |
-| `SHELBY_STORAGE_DIR` | `/app/storage` |
+| `SHELBY_STORAGE_DIR` | `/app/storage` (Railway persistent volume) |
 | `MAX_UPLOAD_FILE_SIZE_MB` | `25` |
 | `EMBEDDING_MODE` | `mock` |
-
-Optional (live Shelby mode only):
-
-| Variable | Value |
-|---|---|
-| `SHELBY_ACCOUNT` | Aptos wallet address |
-| `SHELBY_PRIVATE_KEY` | Aptos private key |
-| `SHELBY_RPC_URL` | Shelby RPC endpoint |
-| `SHELBY_API_KEY` | Shelby API key |
+| `SENTRY_DSN` | *(Optional)* Sentry backend DSN |
+| `SENTRY_ENVIRONMENT` | `production` |
+| `SENTRY_TRACES_SAMPLE_RATE` | `0.1` |
 
 > ⚠️ Never add `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, or `SHELBY_PRIVATE_KEY` to Vercel.
 
@@ -104,8 +99,6 @@ const tls = redisUrl.startsWith('rediss://') ? {} : undefined;
 return { connection: { host, port, username, password, tls } };
 ```
 
-Do not remove this fix.
-
 ---
 
 ## Port Binding
@@ -116,8 +109,6 @@ The API binds to Railway's dynamically assigned `PORT`:
 const port = process.env.PORT || 4000;
 await app.listen(port, '0.0.0.0');
 ```
-
-Never hardcode a port. Never bind to `localhost`.
 
 ---
 
@@ -133,18 +124,6 @@ railway up --service api
 
 ### Manual deploy via dashboard
 Railway Dashboard → dataforge-ai → api → Deploy
-
----
-
-## Vercel Frontend
-
-After Railway API is live, update the Vercel frontend environment variable:
-
-```
-NEXT_PUBLIC_API_URL=https://api-production-e4ad.up.railway.app/api
-```
-
-Then redeploy the Vercel frontend.
 
 ---
 

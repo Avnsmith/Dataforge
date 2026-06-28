@@ -1,6 +1,6 @@
 # Deploying DataForge Frontend to Vercel
 
-Vercel is the official platform for hosting the Next.js frontend (`apps/web`) in production. The NestJS backend API is hosted on Render, and database and Redis instances are hosted on Supabase and Upstash.
+Vercel is the official platform for hosting the Next.js frontend (`apps/web`) in production. The NestJS backend API is hosted on Railway, and database and Redis instances are hosted on Supabase and Upstash.
 
 ---
 
@@ -20,15 +20,17 @@ To import the project into Vercel, follow these settings:
 
 ## 2. Environment Variables
 
-Add the following variable in the Vercel dashboard:
+Add the following variables in the Vercel dashboard:
 
 | Variable | Value | Description |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | `https://dataforge-api.onrender.com/api` | The public endpoint of your backend NestJS API on Render |
+| `NEXT_PUBLIC_API_URL` | `https://api-production-e4ad.up.railway.app/api` | The public endpoint of your backend NestJS API on Railway |
+| `NEXT_PUBLIC_SENTRY_DSN` | *(Optional)* `https://...` | Public Sentry DSN for frontend client-side tracking |
+| `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | `production` | Sentry environment name |
 
 > [!CAUTION]
 > **Zero Private Credentials:**
-> Do NOT set the following environment variables in Vercel. These are server-only secrets and must only exist on Render:
+> Do NOT set the following environment variables in Vercel. These are server-only secrets and must only exist on Railway:
 > - `DATABASE_URL` / `DIRECT_URL`
 > - `REDIS_URL`
 > - `JWT_SECRET`
@@ -41,11 +43,7 @@ Add the following variable in the Vercel dashboard:
 In the Vercel project settings, configure the following custom build parameters:
 
 - **Build Command:**
-  - If building from the sub-app folder root `apps/web`:
-    ```bash
-    npm run build
-    ```
-  - If Vercel has issues compiling workspace dependency packages (like `@dataforge/shared`), import the root project as Vercel workspace root and configure:
+  - If building from the root of the workspace:
     ```bash
     npm run build --workspace=apps/web
     ```
@@ -60,11 +58,12 @@ In the Vercel project settings, configure the following custom build parameters:
 
 ---
 
-## 4. CORS Integration (Render Backend Sync)
+## 4. CORS Integration (Railway Backend Sync)
 
-After Vercel generates your production frontend URL (e.g. `https://dataforge-web.vercel.app`), configure it on your Render Backend Web Service:
+After Vercel generates your production frontend URL (e.g. `https://web-avins-projects-94a43281.vercel.app`), configure it on your Railway Backend API service:
 
 ```ini
-FRONTEND_ORIGIN=https://dataforge-web.vercel.app
+FRONTEND_ORIGIN=https://web-avins-projects-94a43281.vercel.app
+ADDITIONAL_FRONTEND_ORIGINS=https://web-hnxtj388m-avins-projects-94a43281.vercel.app,https://web-6qh7huke6-avins-projects-94a43281.vercel.app
 ```
-Render will allow incoming requests from your Vercel client origin.
+Railway will allow incoming CORS requests from your Vercel client origin.
