@@ -138,13 +138,9 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-# 12. Verify frontend returns 200 (or 302/307/308 if Vercel deployment protection/SSO is active)
+# 12. Verify frontend returns 200
 RESP=$(curl -s -o /tmp/prod_smoke_frontend.txt -w "%{http_code}" "$FRONTEND")
-if [ "$RESP" = "302" ] || [ "$RESP" = "307" ] || [ "$RESP" = "308" ]; then
-  check "12. Frontend Home Page" "$RESP" "$RESP" "Frontend redirected (SSO/HTTPS)"
-else
-  check "12. Frontend Home Page" "200" "$RESP" "Frontend home page request"
-fi
+check "12. Frontend Home Page" "200" "$RESP" "Frontend home page request"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
