@@ -22,5 +22,8 @@
   "dependencies": {
     "@nestjs/jwt": "^11.0.2",
     "jsonwebtoken": "^9.0.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
   }
 }
