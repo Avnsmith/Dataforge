@@ -4,7 +4,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@shelby-protocol/sdk/node": ["../../node_modules/@shelby-protocol/sdk/dist/node/index.d.ts"]
     }
