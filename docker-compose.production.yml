@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: dataforge-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-dataforge}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dataforge-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: dataforge-redis-prod
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - dataforge-net
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: dataforge-api-prod
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-dataforge}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      SHELBY_MODE: ${SHELBY_MODE:-mock}
+      SHELBY_NETWORK: ${SHELBY_NETWORK:-shelbynet}
+      SHELBY_ACCOUNT: ${SHELBY_ACCOUNT:-}
+      SHELBY_PRIVATE_KEY: ${SHELBY_PRIVATE_KEY:-}
+      SHELBY_RPC_URL: ${SHELBY_RPC_URL:-https://rpc.shelby.xyz}
+      SHELBY_EXPLORER_BASE_URL: ${SHELBY_EXPLORER_BASE_URL:-https://explorer.shelby.xyz/shelbynet}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      MAX_UPLOAD_FILE_SIZE_MB: ${MAX_UPLOAD_FILE_SIZE_MB:-25}
+      EMBEDDING_MODE: ${EMBEDDING_MODE:-mock}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+    volumes:
+      - shelby_storage:/app/packages/shelby/storage
+      - api_temp_uploads:/app/apps/api/temp-uploads
+    ports:
+      - "${API_PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - dataforge-net
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: dataforge-web-prod
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:4000/api}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - dataforge-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  shelby_storage:
+  api_temp_uploads:
+
+networks:
+  dataforge-net:
+    driver: bridge

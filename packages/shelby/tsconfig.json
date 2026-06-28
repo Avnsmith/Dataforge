@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": ".",
+    "paths": {
+      "@shelby-protocol/sdk/node": ["../../node_modules/@shelby-protocol/sdk/dist/node/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

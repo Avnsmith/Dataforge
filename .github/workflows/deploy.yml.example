@@ -1,0 +1,53 @@
+# DataForge AI — Deployment Workflow (EXAMPLE)
+# Copy this to deploy.yml and configure secrets before use.
+# Do NOT enable automatic deploys until secrets are properly set.
+
+name: Deploy (EXAMPLE - NOT ACTIVE)
+
+on:
+  workflow_dispatch:  # Manual trigger only
+  # Uncomment to enable auto-deploy:
+  # push:
+  #   branches: [main]
+
+jobs:
+  deploy-api:
+    name: Deploy API
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build API Docker image
+        run: |
+          docker build -f apps/api/Dockerfile \
+            -t ${{ secrets.REGISTRY_URL }}/dataforge-api:${{ github.sha }} .
+
+      - name: Push to Registry
+        run: |
+          echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ secrets.REGISTRY_URL }} -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin
+          docker push ${{ secrets.REGISTRY_URL }}/dataforge-api:${{ github.sha }}
+
+      # Railway deployment example
+      # - name: Deploy to Railway
+      #   run: railway up --service api
+      #   env:
+      #     RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Run migrations
+        run: |
+          # Run migrations against production DB
+          echo "Run: npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # Required secrets (set in GitHub repo settings > Secrets):
+  # DATABASE_URL        - Production PostgreSQL URL
+  # JWT_SECRET          - Strong random secret
+  # REDIS_URL           - Production Redis URL
+  # REGISTRY_URL        - Docker registry URL
+  # REGISTRY_USERNAME   - Docker registry username
+  # REGISTRY_PASSWORD   - Docker registry password
+  # RAILWAY_TOKEN       - Railway deploy token (if using Railway)

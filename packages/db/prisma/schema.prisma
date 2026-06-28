@@ -1,0 +1,108 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             String   @id @default(uuid())
+  walletAddress  String   @unique
+  username       String?  @unique
+  avatarUrl      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  datasets       Dataset[]
+}
+
+model Dataset {
+  id          String   @id @default(uuid())
+  ownerId     String
+  name        String
+  slug        String
+  description String?
+  readme      String?
+  visibility  String   @default("public")
+  license     String?
+  type        String
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User @relation(fields: [ownerId], references: [id])
+  versions    DatasetVersion[]
+  @@unique([ownerId, slug])
+  @@index([ownerId])
+  @@index([slug])
+  @@index([visibility])
+}
+
+model DatasetVersion {
+  id                       String   @id @default(uuid())
+  datasetId                String
+  version                  String
+  changelog                String?
+  status                   String   @default("processing")
+  totalSize                BigInt?
+  fileCount                Int?
+  manifestHash             String?
+  manifestShelbyBlobName   String?
+  manifestShelbyMerkleRoot String?
+  createdAt                DateTime @default(now())
+  dataset                  Dataset @relation(fields: [datasetId], references: [id])
+  files                    DatasetFile[]
+  childLineage             DatasetLineage[] @relation("ChildLineage")
+  parentLineage            DatasetLineage[] @relation("ParentLineage")
+  @@unique([datasetId, version])
+  @@index([datasetId])
+}
+
+model DatasetFile {
+  id                String   @id @default(uuid())
+  versionId         String
+  path              String
+  mimeType          String?
+  size              BigInt
+  sha256            String
+  shelbyBlobName    String
+  shelbyAccount     String?
+  shelbyMerkleRoot  String?
+  explorerUrl       String?
+  createdAt         DateTime @default(now())
+  version           DatasetVersion @relation(fields: [versionId], references: [id])
+  @@index([versionId])
+}
+
+model DatasetFork {
+  id              String   @id @default(uuid())
+  sourceDatasetId String
+  targetDatasetId String
+  sourceVersionId String
+  createdAt       DateTime @default(now())
+}
+
+model DatasetLineage {
+  id              String   @id @default(uuid())
+  childVersionId  String
+  parentVersionId String
+  relationType    String
+  note            String?
+  createdAt       DateTime @default(now())
+  childVersion    DatasetVersion @relation("ChildLineage", fields: [childVersionId], references: [id], onDelete: Cascade)
+  parentVersion   DatasetVersion @relation("ParentLineage", fields: [parentVersionId], references: [id], onDelete: Cascade)
+  @@index([childVersionId])
+  @@index([parentVersionId])
+}
+
+model SearchIndex {
+  id          String   @id @default(uuid())
+  datasetId   String
+  versionId   String?
+  contentType String
+  text        String
+  embedding   Unsupported("vector")?
+  createdAt   DateTime @default(now())
+  @@index([datasetId])
+  @@index([contentType])
+}

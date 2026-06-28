@@ -1,0 +1,11 @@
+node_modules
+.env
+.vercel
+.next
+dist
+*.log
+out
+build
+/tmp
+/packages/shelby/storage
+/apps/api/temp-uploads

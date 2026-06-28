@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+ :root {
+   --background: 222.2 84% 4.9%;
+   --foreground: 210 40% 98%;
+
+   --card: 222.2 84% 6.5%;
+   --card-foreground: 210 40% 98%;
+
+   --popover: 222.2 84% 4.9%;
+   --popover-foreground: 210 40% 98%;
+
+   --primary: 263.4 70% 50.4%;
+   --primary-foreground: 210 40% 98%;
+
+   --secondary: 217.2 32.6% 17.5%;
+   --secondary-foreground: 210 40% 98%;
+
+   --muted: 217.2 32.6% 17.5%;
+   --muted-foreground: 215 20.2% 65.1%;
+
+   --accent: 180 100% 50%;
+   --accent-foreground: 222.2 47.4% 11.2%;
+
+   --destructive: 0 62.8% 30.6%;
+   --destructive-foreground: 210 40% 98%;
+
+   --border: 217.2 32.6% 17.5%;
+   --input: 217.2 32.6% 17.5%;
+   --ring: 263.4 70% 50.4%;
+
+   --radius: 0.75rem;
+ }
+}
+
+@layer base {
+ body {
+   background-color: #050811;
+   color: #e2e8f0;
+   font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+ }
+}
+
+/* Custom premium scrollbar */
+::-webkit-scrollbar {
+ width: 8px;
+ height: 8px;
+}
+::-webkit-scrollbar-track {
+ background: #080c14;
+}
+::-webkit-scrollbar-thumb {
+ background: #1f293d;
+ border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+ background: #3b82f6;
+}
+
+/* Glassmorphism utility */
+.glass {
+ background: rgba(17, 24, 39, 0.7);
+ backdrop-filter: blur(12px);
+ -webkit-backdrop-filter: blur(12px);
+ border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-accent {
+ background: rgba(8, 14, 28, 0.85);
+ border: 1px solid rgba(139, 92, 246, 0.15);
+ box-shadow: 0 0 15px rgba(139, 92, 246, 0.05);
+}
+
+.text-gradient {
+ background: linear-gradient(135deg, #a78bfa 0%, #6366f1 50%, #06b6d4 100%);
+ -webkit-background-clip: text;
+ -webkit-text-fill-color: transparent;
+}
+
+.btn-gradient {
+ background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+ transition: all 0.3s ease;
+}
+
+.btn-gradient:hover {
+ opacity: 0.95;
+ box-shadow: 0 0 15px rgba(124, 58, 237, 0.4);
+}

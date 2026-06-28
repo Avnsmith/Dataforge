@@ -1,0 +1,26 @@
+{
+  "name": "dataforge-ai",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm run start:dev --workspace=apps/api",
+    "dev:frontend": "npm run dev --workspace=apps/web",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build": "npm run build --workspaces --if-present",
+    "db:generate": "npx prisma generate --schema=packages/db/prisma/schema.prisma",
+    "db:migrate:deploy": "npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma",
+    "db:seed": "npm run seed --workspace=packages/db"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@nestjs/jwt": "^11.0.2",
+    "jsonwebtoken": "^9.0.3"
+  }
+}
