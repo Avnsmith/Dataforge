@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { ShelbyConfig, ShelbyUploadResult, ShelbyBlobMetadata, ShelbyVerificationResult } from './types';
-import { Account, Ed25519PrivateKey } from '@aptos-labs/ts-sdk';
+
 
 export interface ShelbyProvider {
   uploadDatasetFile(input: {
@@ -199,7 +199,7 @@ export class MockShelbyProvider implements ShelbyProvider {
 export class LiveShelbyProvider implements ShelbyProvider {
   private config: ShelbyConfig;
   private sdkClient: any = null;
-  private signer: Account;
+  private signer: any;
 
   constructor(config: ShelbyConfig) {
     this.config = config;
@@ -219,6 +219,7 @@ export class LiveShelbyProvider implements ShelbyProvider {
     }
 
     try {
+      const { Account, Ed25519PrivateKey } = require('@aptos-labs/ts-sdk');
       let rawKey = config.privateKey;
       if (rawKey.startsWith('ed25519-priv-')) {
         rawKey = rawKey.substring('ed25519-priv-'.length);

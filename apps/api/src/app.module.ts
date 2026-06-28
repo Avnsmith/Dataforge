@@ -63,9 +63,6 @@ import { AppController } from './app.controller';
     DatasetsModule,
     VersionsModule,
     SearchModule,
-
-    // Register upload-queue so AppController can inject it for /metrics
-    BullModule.registerQueue({ name: 'upload-queue' }),
   ],
 })
 export class AppModule {}

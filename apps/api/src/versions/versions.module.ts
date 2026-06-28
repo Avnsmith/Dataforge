@@ -14,6 +14,6 @@ import { AuthModule } from '../auth/auth.module';
   ],
   controllers: [VersionsController],
   providers: [VersionsService, UploadProcessor],
-  exports: [VersionsService],
+  exports: [VersionsService, BullModule],
 })
 export class VersionsModule {}
