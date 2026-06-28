@@ -42,3 +42,12 @@ Production verification utilizes two core validations:
    bash scripts/production-smoke-test.sh <API_URL> <FRONTEND_URL>
    ```
    Validates full file uploads, asynchronously executes BullMQ workers, updates manifest hashes, and downloads files.
+
+---
+
+## Production URL Endpoints
+
+- **Backend API URL:** `https://dataforge-api-vp8z.onrender.com`
+- **Frontend URL:** `https://web-6qh7huke6-avins-projects-94a43281.vercel.app`
+- **Supabase Database Ref:** `nwsyufbrgotilxinbeul` (region: Singapore)
+- **Upstash Redis Endpoint:** `quick-firefly-70678.upstash.io:6379`
