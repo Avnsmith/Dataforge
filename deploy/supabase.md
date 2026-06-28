@@ -52,7 +52,8 @@ From the root directory of the monorepo, deploy the database schema and insert s
 
 ### Apply Database Migrations:
 ```bash
-DATABASE_URL="postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres" \
+DATABASE_URL="postgresql://postgres:[password]@db.[project-ref].supabase.co:6543/postgres?pgbouncer=true" \
+DIRECT_URL="postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres" \
 npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma
 ```
 

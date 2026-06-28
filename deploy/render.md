@@ -24,12 +24,11 @@ Configure these parameters under the service settings:
 
 - **Build Command:**
   ```bash
-  npm install && npm run build --workspace=apps/api
+  npm install --include=dev && npx prisma generate --schema=packages/db/prisma/schema.prisma && npm run build --workspace=packages/shared --workspace=packages/db --workspace=packages/ai --workspace=packages/shelby --workspace=apps/api
   ```
-  *(If the build fails due to monorepo package compilation ordering, use: `npm install && npm run build`)*
 
 - **Start Command:**
-  To run database migrations automatically on startup before binding to the port:
+  To run database migrations automatically on startup using DIRECT_URL before binding to the port:
   ```bash
   npm run db:migrate:deploy && npm run start --workspace=apps/api
   ```
@@ -46,6 +45,7 @@ Set the following variables on the Render web service:
 | Variable | Value | Description |
 |---|---|---|
 | `DATABASE_URL` | `postgresql://postgres:[password]@db.[ref].supabase.co:6543/postgres?pgbouncer=true` | Supabase connection pooling string |
+| `DIRECT_URL` | `postgresql://postgres:[password]@db.[ref].supabase.co:5432/postgres` | Supabase direct connection string (required for migrations) |
 | `REDIS_URL` | `rediss://default:[password]@db-[ref].upstash.io:6379` | Upstash Redis connection string (TLS enabled) |
 | `JWT_SECRET` | `your-secure-rotated-jwt-secret-string` | Rotated strong signing secret |
 | `FRONTEND_ORIGIN` | `https://dataforge-web.vercel.app` | Rotated Vercel frontend URL |
