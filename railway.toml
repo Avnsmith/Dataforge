@@ -1,0 +1,10 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm install --include=dev && npx prisma generate --schema=packages/db/prisma/schema.prisma && npm run build --workspace=packages/shared --workspace=packages/db --workspace=packages/ai --workspace=packages/shelby --workspace=apps/api"
+
+[deploy]
+startCommand = "npm run db:migrate:deploy && npm run start --workspace=apps/api"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

@@ -1,4 +1,14 @@
-# Deploying DataForge Backend to Render
+# ⚠️ DEPRECATED — Render Backend
+
+> **Render backend was replaced by Railway due to runtime instability on the free tier.**
+>
+> Symptoms: OOM (exit code 134) caused by Upstash Redis TLS handshake hanging indefinitely during NestJS bootstrap on Render's 512 MB free container.
+>
+> **Canonical backend deployment is now Railway.** See [`deploy/railway.md`](./railway.md).
+
+---
+
+# Deploying DataForge Backend to Render (Archived)
 
 Render is a unified platform for hosting backend APIs, background workers, and static sites. We deploy the NestJS API application (`apps/api`) as a Render Web Service.
 
