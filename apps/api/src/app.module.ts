@@ -52,8 +52,10 @@ import { AppController } from './app.controller';
           // Fall back to default
         }
 
+        const tls = redisUrl.startsWith('rediss://') ? {} : undefined;
+
         return {
-          connection: { host, port, username, password },
+          connection: { host, port, username, password, tls },
         };
       },
       inject: [ConfigService],
