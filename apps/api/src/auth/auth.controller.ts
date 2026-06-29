@@ -50,7 +50,7 @@ export class AuthController {
     res.cookie('df_token', token, {
       httpOnly: true,
       secure: isProdOrStaging,
-      sameSite: 'lax',
+      sameSite: isProdOrStaging ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -88,7 +88,7 @@ export class AuthController {
     res.cookie('df_token', authResult.token, {
       httpOnly: true,
       secure: isProdOrStaging,
-      sameSite: 'lax',
+      sameSite: isProdOrStaging ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

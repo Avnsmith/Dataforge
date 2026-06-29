@@ -23,9 +23,10 @@ export class CsrfMiddleware implements NestMiddleware {
       const existingToken = req.cookies?.['XSRF-TOKEN'];
       if (!existingToken) {
         const token = crypto.randomBytes(16).toString('hex');
+        const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
         res.cookie('XSRF-TOKEN', token, {
-          secure: process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging',
-          sameSite: 'lax',
+          secure: isProdOrStaging,
+          sameSite: isProdOrStaging ? 'none' : 'lax',
           path: '/',
         });
       }
