@@ -8,7 +8,7 @@ This report validates the end-to-end cryptographic wallet authentication workflo
 
 | Scenario | Status | Verification Source | Evidence / Details |
 |---|---|---|---|
-| **Aptos Wallet Connect** | **Pending Live Validation** | Petra adapter integration | Frontend modal and Petra hooks configured; browser test required |
+| **Aptos Wallet Connect** | **Pending Manual Validation** | Petra adapter integration | Frontend modal and Petra hooks configured; browser test required |
 | **Request Nonce** | **Test Verified** | `POST /auth/nonce` | Returns `32-char` random hex token with 5-minute database expiry in E2E tests |
 | **Message Signing** | **Test Verified** | Ed25519 signature payload | Cryptographic signature string verified off-chain using testnet keys |
 | **Signature Verify** | **Test Verified** | `POST /auth/verify` | `@aptos-labs/ts-sdk` validates derived public key in `auth.e2e.spec.ts` |

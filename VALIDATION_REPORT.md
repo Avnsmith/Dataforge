@@ -13,8 +13,8 @@ This report certifies the validation status of every staging/production dependen
 | **Supabase (Postgres)** | **Production Verified** | Raw SQL query execution | Migrations applied; verified active database connection |
 | **Upstash (Redis TLS)** | **Production Verified** | ioredis PING verification | Connection handshake over `rediss://` returns `PONG` |
 | **BullMQ & Queues** | **Production Verified** | Worker active job check | Background processing worker executes successfully |
-| **Sentry SDK (NestJS)** | **Configuration Verified** | SentryGlobalFilter initialization | SDK imports initialize silently; DSN is currently unconfigured |
-| **Sentry SDK (Next.js)** | **Configuration Verified** | Sentry config build integration | Config builds successfully; DSN is currently unconfigured |
+| **Sentry SDK (NestJS)** | **Configuration Verified** | SentryGlobalFilter initialization | SDK imports initialize silently; DSN is currently unconfigured (Waived for RC1) |
+| **Sentry SDK (Next.js)** | **Configuration Verified** | Sentry config build integration | Config builds successfully; DSN is currently unconfigured (Waived for RC1) |
 
 ---
 

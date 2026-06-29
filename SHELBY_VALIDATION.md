@@ -12,7 +12,7 @@ This report validates the Shelby storage provider abstraction, upload/download p
 | **Mock Shelby Storage**| **Production Verified** | File upload & download E2E | Persisted on disk; verified SHA-256 matches uploads |
 | **Circuit Breakers** | **Test Verified** | Failed request thresholds | Circuit trips on 5 failures; enters cooldown for 60s in tests |
 | **Retry & Timeout** | **Test Verified** | Retry loop decorators | Retries requests up to 3 times with backoff in tests |
-| **Live SDK Verification** | **Blocked** | Missing SDK / Wallet | Official SDK uninstalled; funded Aptos keys unavailable |
+| **Live SDK Verification** | **Blocked — Not Required for RC1** | Missing SDK / Wallet | Live Shelby remains a post-RC1 external integration task. |
 
 ---
 

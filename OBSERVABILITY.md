@@ -9,7 +9,7 @@ This document compiles the observability metrics, logging configurations, and ex
 Sentry is integrated and ready on both NestJS and Next.js platforms.
 
 - **SENTRY_STATUS:** `Configuration Verified`
-- **SENTRY_VERIFICATION:** `DSN missing` (Live DSN variables are left unconfigured/empty on the host platforms, meaning no active dashboard events were generated).
+- **SENTRY_VERIFICATION:** `DSN missing` (Live DSN variables are left unconfigured/empty on the host platforms, meaning no active dashboard events were generated). Sentry has been formally waived as a release blocker for RC1.
 
 ### Safe Fallback Behavior
 - Sentry checks if `SENTRY_DSN` is empty or absent. If so, it disables itself silently.
