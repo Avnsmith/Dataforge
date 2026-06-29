@@ -1,6 +1,33 @@
 import * as crypto from 'crypto';
+import * as path from 'path';
+import * as fs from 'fs';
+import { pathToFileURL } from 'url';
 import { ShelbyProvider } from '../provider';
 import { ShelbyConfig, ShelbyUploadResult, ShelbyBlobMetadata, ShelbyVerificationResult } from '../types';
+
+function getSdkDirPath() {
+  let current = __dirname;
+  while (true) {
+    const target = path.join(current, 'node_modules', '@shelby-protocol', 'sdk');
+    if (fs.existsSync(target)) {
+      return target;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      // Fallback to absolute workspace location in production
+      return '/app/node_modules/@shelby-protocol/sdk';
+    }
+    current = parent;
+  }
+}
+
+async function importSdkNode() {
+  const sdkDir = getSdkDirPath();
+  const nodeIndexMjs = path.join(sdkDir, 'dist', 'node', 'index.mjs');
+  const fileUrl = pathToFileURL(nodeIndexMjs).href;
+  const importFn = new Function('url', 'return import(url)');
+  return importFn(fileUrl);
+}
 
 export class LiveShelbyProvider implements ShelbyProvider {
   private config: ShelbyConfig;
@@ -61,7 +88,7 @@ export class LiveShelbyProvider implements ShelbyProvider {
     this.checkCircuit();
     if (!this.sdkClient) {
       try {
-        const { ShelbyNodeClient } = await import('@shelby-protocol/sdk/node');
+        const { ShelbyNodeClient } = await importSdkNode();
         this.sdkClient = new ShelbyNodeClient({
           network: this.config.network as any,
           apiKey: this.config.apiKey,
@@ -129,7 +156,7 @@ export class LiveShelbyProvider implements ShelbyProvider {
     return this.callWithTimeoutAndRetry(async () => {
       let merkleRoot: string | undefined;
       try {
-        const { createDefaultErasureCodingProvider, generateCommitments } = await import('@shelby-protocol/sdk/node');
+        const { createDefaultErasureCodingProvider, generateCommitments } = await importSdkNode();
         const provider = await createDefaultErasureCodingProvider();
         const commitments = await generateCommitments(provider, input.fileContent);
         merkleRoot = commitments.blob_merkle_root;

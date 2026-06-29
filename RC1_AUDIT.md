@@ -24,7 +24,7 @@ This audit report performs an independent engineering validation audit of the Da
 | **BullMQ Queue** | **Production Verified** | Worker instances consume background jobs on production | None. |
 | **Prisma Migrations** | **Production Verified** | Deployed schema is active on live Supabase instance | None. |
 | **Shelby Mock Provider** | **Production Verified** | Files uploaded and downloaded successfully to Railway persistent volume | None. |
-| **Shelby Live Provider** | **Not Required For RC1** | Live upload path is not required for the current RC1 scope | Onboard Aptos network credentials post-RC1. |
+| **Shelby Live Provider** | **Blocked** | Live upload path fails due to @shelby-protocol/sdk packaging CommonJS import resolver error | Resolve SDK CommonJS export packaging mismatch. |
 | **Wallet Backend Auth** | **Staging Verified** | Nonces, signatures, and replays verify successfully against api-staging | None. |
 | **Wallet Frontend Auth** | **Pending Manual Validation** | Petra selector modal renders and Petra wallet hooks are configured | Execute manual E2E browser checks with Petra extension. |
 | **HttpOnly Cookie Auth** | **Test Verified** | Express sets `df_token` cookies with correct parameters in tests | None. |
