@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { prisma } from '@dataforge/db';
+import { EmbeddingService } from './search/embedding.service';
 import Redis from 'ioredis';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -12,6 +13,7 @@ export class AppController {
   constructor(
     private readonly configService: ConfigService,
     @InjectQueue('upload-queue') private readonly uploadQueue: Queue,
+    private readonly embeddingService: EmbeddingService,
   ) {}
 
   @Get('health')
@@ -63,7 +65,16 @@ export class AppController {
     } catch (e: any) {
       shelbyStatus = `failed: ${e.message}`;
     }
-    const isAllOk = dbStatus === 'connected' && redisStatus === 'connected' && shelbyStatus.startsWith('connected');
+
+    let embeddingStatus = 'connected';
+    if (!this.embeddingService.isConfigured) {
+      embeddingStatus = `failed: ${this.embeddingService.configErrorMessage}`;
+    }
+
+    const isAllOk = dbStatus === 'connected' &&
+      redisStatus === 'connected' &&
+      shelbyStatus.startsWith('connected') &&
+      this.embeddingService.isConfigured;
     const mode = this.configService.get<string>('SHELBY_MODE') || 'mock';
 
     return {
@@ -74,6 +85,7 @@ export class AppController {
         database: dbStatus,
         redis: redisStatus,
         shelby: shelbyStatus,
+        embedding: embeddingStatus,
       },
       storage: {
         provider: 'Shelby',

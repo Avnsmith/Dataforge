@@ -7,7 +7,11 @@
     "build": "tsc"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
-    "@types/node": "^20.11.24"
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "openai": "^6.45.0"
   }
 }

@@ -13,5 +13,13 @@ export class SearchController {
     const results = await this.searchService.search(query);
     return { results };
   }
+
+  // Agent search endpoint
+  @Get('agent/search')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async agentSearch(@Query('q') query: string) {
+    const results = await this.searchService.search(query);
+    return { results };
+  }
 }
 

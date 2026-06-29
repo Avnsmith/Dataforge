@@ -1,8 +1,8 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Processor, WorkerHost, InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import * as Sentry from '@sentry/nestjs';
 import { Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 import { prisma } from '@dataforge/db';
 import { ShelbyClient } from '@dataforge/shelby';
 import { detectSchema, generateSummary, recommendTags, detectDatasetType, calculateQualityScore, embed } from '@dataforge/ai';
@@ -17,7 +17,10 @@ export class UploadProcessor extends WorkerHost {
   private shelbyClient: ShelbyClient;
   private tempUploadPath: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectQueue('reindex-queue') private readonly reindexQueue: Queue
+  ) {
     super();
     this.shelbyClient = new ShelbyClient({
       mode: this.configService.get<any>('SHELBY_MODE') || 'mock',
@@ -268,6 +271,21 @@ Licensed under ${version.dataset.license || 'proprietary'} rules.
       // 8. Delete local temp folder
       this.logger.log(`Cleaning up local temp folder: ${versionTempDir}`);
       this.deleteFolderRecursive(versionTempDir);
+
+      const enableReindex = this.configService.get<string>('ENABLE_VECTOR_REINDEX') === 'true';
+      if (enableReindex) {
+        await this.reindexQueue.add(
+          'EmbeddingReindexJob',
+          { datasetId: version.datasetId },
+          {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 5000,
+            },
+          }
+        ).catch(err => this.logger.error(`Failed to queue reindex job: ${err.message}`));
+      }
 
       this.logger.log(`[JOB ${jobId}] COMPLETE publish | versionId=${versionId} | attempt=${attempt}`);
     } catch (error: any) {

@@ -7,6 +7,7 @@ import { LoggingInterceptor } from './logging.interceptor';
 import * as express from 'express';
 import * as helmet from 'helmet';
 import * as compression from 'compression';
+import * as cookieParser from 'cookie-parser';
 import { v4 as uuidv4 } from 'uuid';
 
 // Global BigInt serializer patch for JSON.stringify
@@ -42,8 +43,46 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  // Security headers via Helmet
-  app.use((helmet as any).default ? (helmet as any).default() : (helmet as any)());
+  // Parse cookies
+  app.use((cookieParser as any)());
+
+  // Security headers via Helmet (CSP, Referrer-Policy, etc.)
+  const helmetOptions = {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'https://api.dicebear.com'],
+        connectSrc: [
+          "'self'",
+          'https://api-production-e4ad.up.railway.app',
+          'https://web-avins-projects-94a43281.vercel.app',
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+        ],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  };
+
+  app.use(
+    (helmet as any).default
+      ? (helmet as any).default(helmetOptions)
+      : (helmet as any)(helmetOptions)
+  );
+
+  // Permissions-Policy header middleware
+  app.use((req: any, res: any, next: () => void) => {
+    res.setHeader(
+      'Permissions-Policy',
+      'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+    );
+    next();
+  });
 
   // Gzip compression
   app.use((compression as any)());

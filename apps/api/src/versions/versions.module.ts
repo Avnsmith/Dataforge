@@ -4,6 +4,7 @@ import { VersionsController } from './versions.controller';
 import { VersionsService } from './versions.service';
 import { UploadProcessor } from './upload.processor';
 import { AuthModule } from '../auth/auth.module';
+import { SearchModule } from '../search/search.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { AuthModule } from '../auth/auth.module';
       name: 'upload-queue',
     }),
     AuthModule,
+    SearchModule,
   ],
   controllers: [VersionsController],
   providers: [VersionsService, UploadProcessor],

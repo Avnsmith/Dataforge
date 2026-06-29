@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@dataforge/shared';
-
+import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { apiUrl } from '@/lib/api';
 
 interface AuthContextType {
@@ -12,18 +12,21 @@ interface AuthContextType {
   isConnected: boolean;
   isConnecting: boolean;
   connectMockWallet: () => Promise<void>;
+  connectRealWallet: (walletName: any) => Promise<void>;
   disconnectWallet: () => void;
+  wallets: readonly any[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { connected, account, signMessage, connect, disconnect, wallets } = useWallet();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // Load from localStorage on init
+  // 1. Restore legacy mock session from localStorage on init
   useEffect(() => {
     const savedAddress = localStorage.getItem('df_wallet_address');
     const savedUser = localStorage.getItem('df_user');
@@ -35,7 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         setUser(JSON.parse(savedUser));
       } catch (e) {
-        // Clear corrupt storage
         localStorage.removeItem('df_wallet_address');
         localStorage.removeItem('df_user');
         localStorage.removeItem('df_token');
@@ -43,86 +45,173 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // 2. Restore secure real wallet session from HttpOnly cookie on page load
+  useEffect(() => {
+    const restoreCookieSession = async () => {
+      if (connected && account && !user) {
+        try {
+          const sessionUrl = apiUrl('/auth/session');
+          const response = await fetch(sessionUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setWalletAddress(account.address.toString());
+            setUser(data.user);
+            if (data.token) {
+              setToken(data.token);
+            }
+          }
+        } catch (err) {
+          console.warn('Session restore via HttpOnly cookie failed:', err);
+        }
+      }
+    };
+    restoreCookieSession();
+  }, [connected, account, user]);
+
+  // 3. Cryptographic wallet signing handler once wallet is connected
+  useEffect(() => {
+    const handleRealWalletLogin = async () => {
+      // Trigger login only if wallet is connected, account is active, and no app user is loaded
+      if (connected && account && !user && !isConnecting) {
+        setIsConnecting(true);
+        try {
+          const walletAddr = account.address.toString();
+          const publicKeyStr = account.publicKey.toString();
+
+          // 3.1 Fetch fresh nonce from backend
+          const nonceUrl = apiUrl('/auth/nonce');
+          const nonceRes = await fetch(nonceUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ walletAddress: walletAddr }),
+          });
+          if (!nonceRes.ok) {
+            throw new Error(`Failed to request login nonce: ${nonceRes.statusText}`);
+          }
+          const { nonce } = await nonceRes.json();
+
+          // 3.2 Request wallet signature
+          const timestamp = Date.now();
+          const messageStr = `DataForge Login\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
+          
+          const signResponse = await signMessage({
+            message: messageStr,
+            nonce: nonce,
+          });
+
+          // 3.3 Verify signature on backend
+          const verifyUrl = apiUrl('/auth/verify');
+          const verifyRes = await fetch(verifyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              walletAddress: walletAddr,
+              publicKey: publicKeyStr,
+              signature: signResponse.signature.toString(),
+              message: signResponse.fullMessage || messageStr,
+            }),
+          });
+
+          if (!verifyRes.ok) {
+            const errText = await verifyRes.text();
+            throw new Error(`Signature verification rejected: ${errText}`);
+          }
+
+          const verifyData = await verifyRes.json();
+
+          // 3.4 Save session state (token remains in-memory only, secure cookie is handled by browser)
+          setWalletAddress(verifyData.user.walletAddress);
+          setUser(verifyData.user);
+          setToken(verifyData.token);
+        } catch (err: any) {
+          console.error('Wallet cryptographic login failed:', err);
+          alert(`Cryptographic wallet login failed.\n\nError details:\n${err.message || err}`);
+          // Reset wallet connection state on signature failure
+          try {
+            disconnect();
+          } catch (_) {}
+        } finally {
+          setIsConnecting(false);
+        }
+      }
+    };
+
+    handleRealWalletLogin();
+  }, [connected, account, user]);
+
   const connectMockWallet = async () => {
     setIsConnecting(true);
     try {
-      // 0. Pre-flight health check to verify backend reachability
+      // Health check first
       const healthUrl = apiUrl('/health');
-      try {
-        const healthRes = await fetch(healthUrl, { method: 'GET' });
-        if (!healthRes.ok) {
-          throw new Error(`Health check returned status: ${healthRes.status}`);
-        }
-      } catch (healthErr: any) {
-        console.error('DataForge backend server is unreachable at:', healthUrl, healthErr);
-        throw new Error(
-          `DataForge API backend is unreachable at ${healthUrl}. Please ensure the NestJS server is running on port 4000.\n(Network error: ${healthErr.message})`
-        );
-      }
+      await fetch(healthUrl);
 
-      // 1. Generate Aptos-style mock address: 0x + 64 random hex characters
+      // Generate random mock wallet address
       const hexChars = '0123456789abcdef';
       let randomHex = '0x';
       for (let i = 0; i < 64; i++) {
         randomHex += hexChars[Math.floor(Math.random() * 16)];
       }
 
-      // 2. Register/Login on backend
+      // Legacy auth endpoint
       const walletUrl = apiUrl('/auth/wallet');
-      let response: Response;
-      try {
-        response = await fetch(walletUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ walletAddress: randomHex }),
-        });
-      } catch (netErr: any) {
-        console.error('Network failure connecting to wallet auth endpoint:', walletUrl, netErr);
-        throw new Error(`Network failure connecting to ${walletUrl}. Error: ${netErr.message}`);
-      }
+      const response = await fetch(walletUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: randomHex }),
+      });
 
       if (!response.ok) {
-        let errBody = '';
-        try {
-          errBody = await response.text();
-        } catch (_) {}
-        console.error('Wallet connection auth failed:', {
-          url: walletUrl,
-          status: response.status,
-          statusText: response.statusText,
-          body: errBody,
-        });
-        throw new Error(
-          `Auth endpoint rejected request.\nURL: ${walletUrl}\nStatus: ${response.status} ${response.statusText}\nResponse: ${errBody}`
-        );
+        throw new Error('Mock authentication rejected.');
       }
 
       const data = await response.json();
       
-      // 3. Save states
       setWalletAddress(data.user.walletAddress);
       setUser(data.user);
       setToken(data.token);
+
+      // Save to localStorage (only allowed in mock mode)
       localStorage.setItem('df_wallet_address', data.user.walletAddress);
       localStorage.setItem('df_user', JSON.stringify(data.user));
       localStorage.setItem('df_token', data.token);
     } catch (error: any) {
-      console.error('Wallet connection failed:', error);
+      console.error('Mock wallet connection failed:', error);
       alert(`Could not connect mock wallet.\n\nError details:\n${error.message || error}`);
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const disconnectWallet = () => {
+  const connectRealWallet = async (walletName: any) => {
+    setIsConnecting(true);
+    try {
+      await connect(walletName);
+    } catch (error: any) {
+      console.error('Failed to connect real wallet:', error);
+      alert(`Could not connect wallet. Error: ${error.message || error}`);
+      setIsConnecting(false);
+    }
+  };
+
+  const disconnectWallet = async () => {
     setWalletAddress(null);
     setUser(null);
     setToken(null);
+    
+    // Clear mock localStorage
     localStorage.removeItem('df_wallet_address');
     localStorage.removeItem('df_user');
     localStorage.removeItem('df_token');
+
+    try {
+      disconnect();
+    } catch (_) {}
   };
 
   return (
@@ -134,7 +223,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isConnected: !!walletAddress,
         isConnecting,
         connectMockWallet,
+        connectRealWallet,
         disconnectWallet,
+        wallets: wallets || [],
       }}
     >
       {children}

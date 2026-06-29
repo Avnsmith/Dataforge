@@ -8,13 +8,13 @@ This document compiles the observability metrics, logging configurations, and ex
 
 Sentry is integrated and ready on both NestJS and Next.js platforms.
 
-- **SENTRY_STATUS:** `READY_FOR_CONFIGURATION`
-- **SENTRY_VERIFICATION:** `SKIPPED` (Live DSN variables are left unconfigured/empty on the host platforms, meaning no active dashboard events were generated).
+- **SENTRY_STATUS:** `Configuration Verified`
+- **SENTRY_VERIFICATION:** `DSN missing` (Live DSN variables are left unconfigured/empty on the host platforms, meaning no active dashboard events were generated).
 
 ### Safe Fallback Behavior
 - Sentry checks if `SENTRY_DSN` is empty or absent. If so, it disables itself silently.
 - Sentry checks if `NEXT_PUBLIC_SENTRY_DSN` is empty or absent. If so, it disables itself silently.
-- The app runs normally without crash in both cases.
+- The app runs normally without crashing in both cases.
 
 ---
 
@@ -41,4 +41,5 @@ The API uses a request ID middleware and a custom logging interceptor:
   if (process.env.NODE_ENV === 'production') {
     throw new Error('Forbidden: Sentry test endpoint is disabled in production environment');
   }
+  ```
   ```

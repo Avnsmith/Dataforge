@@ -8,6 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "@aptos-labs/ts-sdk": "^5.2.1",
+    "@aptos-labs/wallet-adapter-react": "^8.3.3",
     "@dataforge/shared": "*",
     "@sentry/nextjs": "^10.62.0",
     "@tanstack/react-query": "^5.37.1",

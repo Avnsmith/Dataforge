@@ -97,13 +97,39 @@ model DatasetLineage {
 }
 
 model SearchIndex {
-  id          String   @id @default(uuid())
-  datasetId   String
-  versionId   String?
-  contentType String
-  text        String
-  embedding   Unsupported("vector")?
-  createdAt   DateTime @default(now())
+  id              String   @id @default(uuid())
+  datasetId       String
+  versionId       String?
+  contentType     String
+  text            String
+  embedding       Unsupported("vector")?
+  createdAt       DateTime @default(now())
+  searchEmbedding SearchEmbedding?
   @@index([datasetId])
   @@index([contentType])
+}
+
+model SearchEmbedding {
+  id            String      @id @default(uuid())
+  searchIndexId String      @unique
+  provider      String
+  model         String
+  dimensions    Int
+  vector        Unsupported("vector")
+  createdAt     DateTime    @default(now())
+  searchIndex   SearchIndex @relation(fields: [searchIndexId], references: [id], onDelete: Cascade)
+  @@index([searchIndexId])
+}
+
+model AuthNonce {
+  id            String   @id @default(uuid())
+  walletAddress String
+  nonce         String   @unique
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+  ip            String
+  userAgent     String
+  used          Boolean  @default(false)
+  @@index([walletAddress])
+  @@index([nonce])
 }
