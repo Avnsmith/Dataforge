@@ -32,7 +32,9 @@ export class CsrfMiddleware implements NestMiddleware {
       }
     }
 
-    if (isSafeMethod || isAuthRoute) {
+    const hasBearerToken = !!req.headers.authorization?.toLowerCase().startsWith('bearer ');
+
+    if (isSafeMethod || isAuthRoute || hasBearerToken) {
       return next();
     }
 

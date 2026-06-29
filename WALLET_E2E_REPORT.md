@@ -8,12 +8,12 @@ This report validates the end-to-end cryptographic wallet authentication workflo
 
 | Scenario | Status | Verification Source | Evidence / Details |
 |---|---|---|---|
-| **Aptos Wallet Connect** | **PETRA_AUTH: PENDING MANUAL VALIDATION** | Petra adapter integration | Frontend modal & Petra hooks configured; CORS & SameSite issues fixed; manual click verify pending |
-| **Request Nonce** | **Test Verified** | `POST /auth/nonce` | Returns `32-char` random hex token with 5-minute database expiry in E2E tests |
-| **Message Signing** | **Test Verified** | Ed25519 signature payload | Cryptographic signature string verified off-chain using testnet keys |
-| **Signature Verify** | **Test Verified** | `POST /auth/verify` | `@aptos-labs/ts-sdk` validates derived public key in `auth.e2e.spec.ts` |
-| **Cookie Creation** | **Test Verified** | HttpOnly header response | Sets `df_token` cookie as `HttpOnly; Secure; SameSite=None` in E2E tests |
-| **Replay Protection** | **Test Verified** | Invalidation test | Re-requesting auth with same nonce/signature fails with 403/400 in E2E tests |
+| **Aptos Wallet Connect** | **Pending Manual Validation** | Petra adapter integration | Frontend modal & Petra hooks configured; manual Petra checks pending |
+| **Request Nonce** | **Staging Verified** | `POST /auth/nonce` | Returns `32-char` random hex token with 5-minute database expiry on api-staging |
+| **Message Signing** | **Staging Verified** | Ed25519 signature payload | Cryptographic signature string verified off-chain using testnet keys |
+| **Signature Verify** | **Staging Verified** | `POST /auth/verify` | `@aptos-labs/ts-sdk` validates derived public key on api-staging |
+| **Cookie Creation** | **Staging Verified** | HttpOnly header response | Sets `df_token` cookie as `HttpOnly; Secure; SameSite=None` on api-staging |
+| **Replay Protection** | **Staging Verified** | Invalidation test | Re-requesting auth with same nonce/signature fails with HTTP 400 Bad Request |
 | **Expired Nonce Rejection**| **Test Verified** | Expiry time test | Nonces older than 5 minutes fail to verify, raising BadRequestException |
 
 ---

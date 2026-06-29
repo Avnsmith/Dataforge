@@ -12,7 +12,7 @@ This report validates the pgvector semantic search framework, including database
 | **SearchEmbedding Schema** | **Production Verified** | Prisma SQL table inspection | pgvector active in production database |
 | **Reindex Worker** | **Production Verified** | BullMQ processor execution | `ReindexProcessor` writes real embeddings using raw SQL |
 | **Fallback on Missing Key** | **Test Verified** | Graceful fallback test | Returns degraded on health check and redirects to keyword |
-| **Real Gemini Verification** | **Production Verified** | Live Google Generative AI API calls | model `gemini-embedding-001` returns 3072-dim vectors |
+| **Real Gemini Verification** | **Blocked** | Live Google Generative AI API calls | API keys are not configured in the staging environment |
 
 ---
 

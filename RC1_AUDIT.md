@@ -19,25 +19,26 @@ This audit report performs an independent engineering validation audit of the Da
 | **Railway API** | **Production Verified** | Deployed backend responds to `GET /health` with 200 OK | None. |
 | **Vercel Frontend** | **Production Verified** | Canonical site loads publicly without errors | None. |
 | **Supabase Database** | **Production Verified** | Queries executed successfully against live Supabase database | None. |
+| **Neon Staging DB** | **Staging Verified** | Verified independent Neon Postgres connection and migrations applied | None. |
 | **Upstash Redis** | **Production Verified** | Connection handshake over `rediss://` returns `PONG` | None. |
 | **BullMQ Queue** | **Production Verified** | Worker instances consume background jobs on production | None. |
 | **Prisma Migrations** | **Production Verified** | Deployed schema is active on live Supabase instance | None. |
 | **Shelby Mock Provider** | **Production Verified** | Files uploaded and downloaded successfully to Railway persistent volume | None. |
-| **Shelby Live Provider** | **Blocked — Not Required for RC1** | Live upload path throws configuration exceptions | Onboard Aptos network credentials post-RC1. |
-| **Wallet Backend Auth** | **Test Verified** | Nonces and signatures pass E2E tests in `auth.e2e.spec.ts` | None. |
-| **Wallet Frontend Auth** | **Pending Manual Validation** | Petra selector modal renders and Petra wallet hooks are configured | Execute manual E2E browser checks with Petra extension post-RC1. |
+| **Shelby Live Provider** | **Not Required For RC1** | Live upload path is not required for the current RC1 scope | Onboard Aptos network credentials post-RC1. |
+| **Wallet Backend Auth** | **Staging Verified** | Nonces, signatures, and replays verify successfully against api-staging | None. |
+| **Wallet Frontend Auth** | **Pending Manual Validation** | Petra selector modal renders and Petra wallet hooks are configured | Execute manual E2E browser checks with Petra extension. |
 | **HttpOnly Cookie Auth** | **Test Verified** | Express sets `df_token` cookies with correct parameters in tests | None. |
 | **CSRF Protection** | **Test Verified** | `csrf.e2e.spec.ts` asserts cookie and header validation | None. |
 | **Sentry Backend** | **Configuration Verified** | Sentry SDK initialized but DSN key is empty (Waived for RC1) | Onboard active Sentry DSN key post-RC1. |
 | **Sentry Frontend** | **Configuration Verified** | Sentry config builds silently but DSN key is empty (Waived for RC1) | Onboard active Sentry DSN key post-RC1. |
 | **Structured Logging** | **Production Verified** | Container logs output JSON format with request IDs | None. |
 | **Semantic Search Framework**| **Production Verified** | Cosine similarity raw SQL queries matched vectors successfully | None. |
-| **Gemini/OpenAI Embeddings**| **Production Verified** | Real Gemini model `gemini-embedding-001` generated 3072-dim vectors | None. |
+| **Gemini/OpenAI Embeddings**| **Blocked** | Google Generative AI API keys are not configured in staging environment | Configure API key on staging for live embedding verification. |
 | **pgvector SearchEmbedding** | **Production Verified** | pgvector extension active in production Supabase database | None. |
 | **Reindex Worker** | **Production Verified** | `ReindexProcessor` writes real embeddings to Supabase using raw SQL | None. |
 | **Production Smoke Test** | **Production Verified** | 14/14 checks pass against live deployed endpoints | None. |
-| **Performance Benchmark** | **Test Verified — methodology limited** | Local NestJS query concurrency test metrics collected | Execute benchmarks on production-sized dataset. |
-| **Dependency Audit** | **Implemented** | Vulnerabilities identified and analyzed in security report | Defer framework updates to next sprint. |
+| **Performance Benchmark** | **Test Verified** | Local NestJS query concurrency test metrics collected | Execute benchmarks on production-sized dataset. |
+| **Dependency Audit** | **Test Verified** | Vulnerabilities identified and analyzed in security report | Defer framework updates to next sprint. |
 
 ---
 

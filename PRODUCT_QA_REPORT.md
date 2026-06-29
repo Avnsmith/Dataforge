@@ -26,19 +26,19 @@ This report presents a comprehensive end-to-end QA validation of the DataForge A
 |---|---|---|
 | **Frontend Public Load** | **Production Verified** | Deployed Next.js site loads publicly without SSO walls. |
 | **Wallet Connection** | **Pending Manual Validation** | Connect modal renders Petra Wallet selection hooks. |
-| **Wallet Signing & Auth**| **Test Verified** | `auth.e2e.spec.ts` passes cryptographic handshake successfully. |
-| **Cookie / Session** | **Test Verified** | Sets `df_token` cookie with strict parameter flags in E2E. |
-| **Create Dataset** | **Production Verified** | `POST /datasets` succeeds with `201 Created` during smoke test. |
-| **Upload File** | **Production Verified** | `POST /versions/:id/files/upload` creates blob successfully. |
-| **Publish Version** | **Production Verified** | Status updates to `ready` asynchronously during smoke test. |
-| **Manifest Generation** | **Production Verified** | Deterministic `manifest.json` correctly generated and registered. |
-| **Download File** | **Production Verified** | File retrieved; SHA-256 matches uploaded checksum bytes. |
-| **Keyword/Tag Search** | **Production Verified** | `GET /search?q=crypto` returns relevant results. |
-| **Semantic Search** | **Production Verified** | Real Gemini `gemini-embedding-001` queries match database. |
-| **Lineage & Forking** | **Production Verified** | Fork dataset copies version nodes and links child lineage relations. |
-| **Agent Endpoints** | **Production Verified** | Shape endpoints return structured JSON response formats. |
-| **Health & Metrics** | **Production Verified** | `/health` returns `200 OK`; `/metrics` prints Prometheus stats. |
-| **Replay Protection** | **Test Verified** | Signatures rejected upon reuse in automated test assertions. |
+| **Wallet Signing & Auth**| **Staging Verified** | `staging_smoke.js` passes cryptographic handshake successfully against Neon. |
+| **Cookie / Session** | **Staging Verified** | Sets `df_token` cookie with strict parameter flags in staging verify. |
+| **Create Dataset** | **Staging Verified** | Datasets created and populated cleanly via seed script on Neon. |
+| **Upload File** | **Staging Verified** | Version files uploaded and manifest compiled on staging. |
+| **Publish Version** | **Staging Verified** | Staging dataset status set to ready successfully. |
+| **Manifest Generation** | **Staging Verified** | Deterministic `manifest.json` correctly generated and registered. |
+| **Download File** | **Staging Verified** | File retrieved; SHA-256 matches uploaded checksum bytes. |
+| **Keyword/Tag Search** | **Staging Verified** | `GET /search?q=crypto` returns relevant results from Neon. |
+| **Semantic Search** | **Blocked** | Google Generative AI API keys are not configured in staging environment. |
+| **Lineage & Forking** | **Staging Verified** | Fork dataset copies version nodes and links child lineage relations. |
+| **Agent Endpoints** | **Staging Verified** | Shape endpoints return structured JSON response formats. |
+| **Health & Metrics** | **Staging Verified** | `/health` returns `200 OK`; `/metrics` prints Prometheus stats. |
+| **Replay Protection** | **Staging Verified** | Signatures rejected upon reuse in staging verify E2E script. |
 
 ---
 
