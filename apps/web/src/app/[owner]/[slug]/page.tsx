@@ -607,94 +607,162 @@ export default function DatasetDetailPage() {
 
          {/* Right Column: Shelby Storage Verification Metadata */}
          <aside className="space-y-6">
-           <div className="glass p-5 rounded-xl border-slate-800/40 space-y-4">
-             <div className="flex items-center justify-between">
-               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                 Shelby Hot Verification
-               </h3>
-               {activeVersion?.status === 'ready' ? (
-                 <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-950/20 border border-emerald-900/30">
-                   <CheckCircle className="h-3.5 w-3.5" />
-                   Verified
-                 </span>
-               ) : (
-                 <span className="flex items-center gap-1 text-[10px] text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-950/20 border border-amber-900/30">
-                   <AlertCircle className="h-3.5 w-3.5" />
-                   {activeVersion?.status || 'Unknown'}
-                 </span>
-               )}
-             </div>
+                       <div className="glass p-5 rounded-xl border-slate-800/40 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-850 pb-3">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Shelby Verification
+                </h3>
+                {(() => {
+                  if (!activeVersion) {
+                    return (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-950/20 border border-amber-900/30">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        Pending
+                      </span>
+                    );
+                  }
+                  if (activeVersion.status === 'failed') {
+                    return (
+                      <span className="flex items-center gap-1 text-[10px] text-rose-400 font-semibold px-2 py-0.5 rounded bg-rose-950/20 border border-rose-900/30">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        Failed
+                      </span>
+                    );
+                  }
+                  if (activeVersion.status !== 'ready') {
+                    return (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-950/20 border border-amber-900/30">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        Pending
+                      </span>
+                    );
+                  }
+                  if (dataset.shelbyMode === 'mock') {
+                    return (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-950/20 border border-amber-900/30">
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Mock Verified
+                      </span>
+                    );
+                  }
+                  const hasLiveProof = activeVersion.manifestShelbyBlobName && activeVersion.manifestShelbyMerkleRoot && !activeVersion.manifestShelbyMerkleRoot.startsWith('mock-');
+                  if (hasLiveProof) {
+                    return (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-950/20 border border-emerald-900/30">
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Live Verified
+                      </span>
+                    );
+                  } else {
+                    return (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-400 font-semibold px-2 py-0.5 rounded bg-amber-950/20 border border-amber-900/30">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        Live Pending
+                      </span>
+                    );
+                  }
+                })()}
+              </div>
 
-             {/* Shelby Provider Mode Banner */}
-             <div className={`p-2.5 rounded text-[11px] font-medium leading-normal border ${
-               dataset.shelbyMode === 'mock' 
-                 ? 'bg-amber-950/15 border-amber-900/30 text-amber-300'
-                 : 'bg-emerald-950/15 border-emerald-900/30 text-emerald-300'
-             }`}>
-               {dataset.shelbyMode === 'mock' ? (
-                 <span>⚠️ Mock Shelby Provider — local simulation, not live network.</span>
-               ) : (
-                 <span>✅ Live Shelby Provider Active</span>
-               )}
-             </div>
+              {(() => {
+                if (!activeVersion) {
+                  return (
+                    <div className="text-xs text-slate-400 space-y-1">
+                      <span className="font-semibold block">Reason:</span>
+                      <span>No version has been created yet.</span>
+                    </div>
+                  );
+                }
 
-             {activeVersion?.status === 'ready' ? (
-               <div className="space-y-4 text-xs">
-                 {/* Merkle root */}
-                 <div className="space-y-1.5">
-                   <span className="text-slate-500 font-medium block">Merkle Root Hash</span>
-                   <div className="flex items-center gap-2 bg-[#03050a] border border-slate-850 px-3 py-2 rounded-md font-mono text-[10px] text-slate-300">
-                     <span className="truncate flex-1">{activeVersion.manifestShelbyMerkleRoot}</span>
-                     <button
-                       onClick={() => handleCopy(activeVersion.manifestShelbyMerkleRoot || '', 'merkle')}
-                       className="text-slate-500 hover:text-slate-300 transition-colors"
-                     >
-                       <Copy className="h-3.5 w-3.5" />
-                     </button>
-                   </div>
-                 </div>
+                if (activeVersion.status === 'failed') {
+                  return (
+                    <div className="text-xs text-rose-400 space-y-1">
+                      <span className="font-semibold block">Reason:</span>
+                      <span>File verification or storage generation failed. Please verify file integrity and re-upload.</span>
+                    </div>
+                  );
+                }
 
-                 {/* Manifest File */}
-                 <div className="space-y-1.5">
-                   <span className="text-slate-500 font-medium block">Manifest Blob Name</span>
-                   <div className="bg-[#03050a] border border-slate-850 px-3 py-2 rounded-md font-mono text-[10px] text-slate-300 truncate">
-                     {activeVersion.manifestShelbyBlobName}
-                   </div>
-                 </div>
+                if (activeVersion.status !== 'ready') {
+                  return (
+                    <div className="text-xs text-slate-400 space-y-1">
+                      <span className="font-semibold block">Reason:</span>
+                      <span>Version is ${activeVersion.status}. Publish the version to generate manifest and verification data.</span>
+                    </div>
+                  );
+                }
 
-                 {/* Manifest Hash */}
-                 <div className="space-y-1.5">
-                   <span className="text-slate-500 font-medium block">Manifest Integrity Hash</span>
-                   <div className="bg-[#03050a] border border-slate-850 px-3 py-2 rounded-md font-mono text-[10px] text-slate-300 truncate">
-                     {activeVersion.manifestHash}
-                   </div>
-                 </div>
+                return (
+                  <div className="space-y-4 text-xs">
+                    <div className="p-2.5 rounded text-[11px] font-medium leading-normal border bg-slate-900/40 border-slate-850 text-slate-300">
+                      <div>
+                        <span className="font-bold">Provider:</span>{' '}
+                        {dataset.shelbyMode === 'mock' ? 'Mock Shelby Provider' : 'Live Shelby Provider'}
+                      </div>
+                      <div className="mt-1">
+                        <span className="font-bold">Live Network:</span>{' '}
+                        {dataset.shelbyMode === 'mock' ? 'Disabled (Local Simulation)' : 'Enabled'}
+                      </div>
+                      <div className="mt-1">
+                        <span className="font-bold">Manifest Status:</span> Generated
+                      </div>
+                      <div className="mt-1">
+                        <span className="font-bold">SHA-256 Checksum:</span> Verified
+                      </div>
+                      <div className="mt-1">
+                        <span className="font-bold">Merkle Root Verification:</span>{' '}
+                        {dataset.shelbyMode === 'mock' ? 'Simulated' : 'Verified'}
+                      </div>
+                    </div>
 
-                 {/* Explorer Link */}
-                 {activeVersion.manifestShelbyBlobName && (
-                   <a
-                     href={`${dataset.explorerUrl || 'https://explorer.shelby.xyz/shelbynet'}/blob/${activeVersion.manifestShelbyBlobName}`}
-                     target="_blank"
-                     rel="noopener noreferrer"
-                     className="flex items-center justify-center gap-1.5 w-full h-9 rounded bg-[#0b1424] hover:bg-[#0f1b30] border border-cyan-900/30 text-[11px] font-bold text-cyan-400 transition-all"
-                   >
-                     <span>Explore on Shelby Explorer</span>
-                     <ExternalLink className="h-3 w-3" />
-                   </a>
-                 )}
+                    <div className="space-y-1.5">
+                      <span className="text-slate-500 font-medium block">Merkle Root Hash</span>
+                      <div className="flex items-center gap-2 bg-[#03050a] border border-slate-850 px-3 py-2 rounded-md font-mono text-[10px] text-slate-300">
+                        <span className="truncate flex-1">{activeVersion.manifestShelbyMerkleRoot}</span>
+                        <button
+                          onClick={() => handleCopy(activeVersion.manifestShelbyMerkleRoot || '', 'merkle')}
+                          className="text-slate-500 hover:text-slate-300 transition-colors"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
 
-                 {copiedText && (
-                   <p className="text-[10px] text-emerald-400 font-bold text-center">
-                     Copied {copiedText} hash to clipboard!
-                   </p>
-                 )}
-               </div>
-             ) : (
-               <p className="text-xs text-slate-500 leading-relaxed">
-                 Shelby verification details will appear once the version changes status to <strong className="text-slate-400">ready</strong>.
-               </p>
-             )}
-           </div>
+                    <div className="space-y-1.5">
+                      <span className="text-slate-500 font-medium block">Manifest Blob Name</span>
+                      <div className="bg-[#03050a] border border-slate-850 px-3 py-2 rounded-md font-mono text-[10px] text-slate-300 truncate">
+                        {activeVersion.manifestShelbyBlobName}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <span className="text-slate-500 font-medium block">Manifest Integrity Hash</span>
+                      <div className="bg-[#03050a] border border-slate-850 px-3 py-2 rounded-md font-mono text-[10px] text-slate-300 truncate">
+                        {activeVersion.manifestHash}
+                      </div>
+                    </div>
+
+                    {activeVersion.manifestShelbyBlobName && (
+                      <a
+                        href={`${dataset.explorerUrl || 'https://explorer.shelby.xyz/shelbynet'}/blob/${activeVersion.manifestShelbyBlobName}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1.5 w-full h-9 rounded bg-[#0b1424] hover:bg-[#0f1b30] border border-cyan-900/30 text-[11px] font-bold text-cyan-400 transition-all"
+                      >
+                        <span>Explore on Shelby Explorer</span>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+
+                    {copiedText && (
+                      <p className="text-[10px] text-emerald-400 font-bold text-center">
+                        Copied &{copiedText} hash to clipboard!
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
 
            {/* License details */}
            <div className="glass p-5 rounded-xl border-slate-800/40 text-xs space-y-3">

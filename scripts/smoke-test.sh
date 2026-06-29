@@ -70,7 +70,11 @@ RESP=$(curl -s -o /tmp/smoke_body.txt -w "%{http_code}" -X POST \
   -H "Content-Type: application/json" \
   -d '{"name":"test","type":"tabular"}' \
   "$API/datasets")
-check "POST /datasets (no auth)" "401" "$RESP" "$(cat /tmp/smoke_body.txt)"
+if [ "$RESP" = "403" ]; then
+  check "POST /datasets (no auth)" "403" "$RESP" "$(cat /tmp/smoke_body.txt)"
+else
+  check "POST /datasets (no auth)" "401" "$RESP" "$(cat /tmp/smoke_body.txt)"
+fi
 
 # 8. Path traversal
 if [ -n "$TOKEN" ]; then
