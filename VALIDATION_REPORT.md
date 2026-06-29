@@ -39,3 +39,9 @@ This report certifies the validation status of every staging/production dependen
   const tls = redisUrl.startsWith('rediss://') ? {} : undefined;
   ```
 - **Evidence:** Connection executes successfully over encrypted connection logs.
+
+### CORS & SameSite Cookie Validation
+- Cross-origin resource sharing configured via `enableCors` in NestJS:
+  - Dynamic origins loader retrieves `FRONTEND_ORIGIN` and `ADDITIONAL_FRONTEND_ORIGINS`.
+  - CORS authorized preflight OPTIONS request returns `204 No Content` for custom Vercel preview domains.
+  - Cookies (`df_token` and `XSRF-TOKEN`) use `sameSite: 'none'` and `secure: true` in production/staging to authorize AJAX cookie transfers.

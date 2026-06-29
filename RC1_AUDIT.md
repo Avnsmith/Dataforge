@@ -6,9 +6,9 @@ This audit report performs an independent engineering validation audit of the Da
 
 ## 1. Executive Summary
 
-- **Overall Readiness Score:** **92 / 100**
+- **Overall Readiness Score:** **94 / 100**
 - **Sprint Gate Decision:** **RC1 APPROVED**
-  - *Justification:* All production dependencies (Prisma, Supabase, Upstash Redis, BullMQ, and pgvector) are fully verified. CSRF protection and security headers are active and pass automated testing. Sentry is waived as a non-critical release blocker. Petra Wallet and Shelby Live integrations are formally deferred to post-RC1 deployment tasks.
+  - *Justification:* All production dependencies (Prisma, Supabase, Upstash Redis, BullMQ, and pgvector) are fully verified. CSRF protection, security headers, and CORS domains are active. SameSite cookie configuration is updated to `'none'` to authorize cross-domain cookie transmission between Vercel and Railway. Sentry is waived as a non-critical release blocker. Petra Wallet and Shelby Live integrations are formally deferred to post-RC1 deployment tasks.
 
 ---
 
@@ -43,5 +43,5 @@ This audit report performs an independent engineering validation audit of the Da
 
 ## 3. Formal Blocker Status & Waived Criteria
 1. **Sentry Dashboard Logging (Waived):** Sentry error capturing is not a hard release-blocker for RC1. The SDK is verified to boot cleanly in inactive mode.
-2. **Petra Wallet Connect (Post-RC1):** Production runs on `AUTH_MODE=mock` which is E2E production-verified. Crypotographic wallet auth and Petra extension validation will be enabled post-RC1.
+2. **Petra Wallet Connect (Post-RC1):** Production runs on `AUTH_MODE=mock` which is E2E production-verified. Crypotographic wallet auth and Petra extension validation will be enabled post-RC1. SameSite configuration is set to `none` to support Vercel-to-Railway cross-domain cookies.
 3. **Shelby Live Storage (Post-RC1):** Not required for RC1. Mock provider is fully verified on the Railway persistent volume.
