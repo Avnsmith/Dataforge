@@ -6,6 +6,11 @@ import { UploadProcessor } from './upload.processor';
 import { AuthModule } from '../auth/auth.module';
 import { SearchModule } from '../search/search.module';
 
+const providers: any[] = [VersionsService];
+if (process.env.RUN_MODE === 'worker' || !process.env.RUN_MODE) {
+  providers.push(UploadProcessor);
+}
+
 @Module({
   imports: [
     BullModule.registerQueue({
@@ -15,7 +20,7 @@ import { SearchModule } from '../search/search.module';
     SearchModule,
   ],
   controllers: [VersionsController],
-  providers: [VersionsService, UploadProcessor],
+  providers,
   exports: [VersionsService, BullModule],
 })
 export class VersionsModule {}

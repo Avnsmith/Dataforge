@@ -1,0 +1,166 @@
+version: '3.8'
+
+services:
+  dataforge_postgres:
+    image: pgvector/pgvector:pg16
+    container_name: dataforge_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-dataforge}
+    volumes:
+      - /opt/dataforge/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dataforge_internal
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dataforge_redis:
+    image: redis:7.4-alpine
+    container_name: dataforge_redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - /opt/dataforge/data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - dataforge_internal
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dataforge_api:
+    image: dataforge-backend:v0.1.0
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    container_name: dataforge_api
+    restart: unless-stopped
+    depends_on:
+      dataforge_postgres:
+        condition: service_healthy
+      dataforge_redis:
+        condition: service_healthy
+    expose:
+      - "4000"
+    environment:
+      NODE_ENV: production
+      RUN_MODE: api
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@dataforge_postgres:5432/${POSTGRES_DB:-dataforge}?schema=public
+      REDIS_URL: redis://dataforge_redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      SHELBY_MODE: ${SHELBY_MODE:-mock}
+      SHELBY_NETWORK: ${SHELBY_NETWORK:-shelbynet}
+      SHELBY_ACCOUNT: ${SHELBY_ACCOUNT:-}
+      SHELBY_PRIVATE_KEY: ${SHELBY_PRIVATE_KEY:-}
+      SHELBY_RPC_URL: ${SHELBY_RPC_URL:-https://rpc.shelby.xyz}
+      SHELBY_EXPLORER_BASE_URL: ${SHELBY_EXPLORER_BASE_URL:-https://explorer.shelby.xyz/shelbynet}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://web-gamma-green-wd3aonhbdz.vercel.app}
+      MAX_UPLOAD_FILE_SIZE_MB: ${MAX_UPLOAD_FILE_SIZE_MB:-25}
+      EMBEDDING_MODE: ${EMBEDDING_MODE:-mock}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      PRISMA_QUERY_ENGINE_LIBRARY: /libquery_engine.so.node
+    volumes:
+      - /opt/dataforge/storage/mock:/app/packages/shelby/storage
+      - /opt/dataforge/storage/temp-uploads:/app/apps/api/temp-uploads
+      - /opt/dataforge/env/libquery_engine.so.node:/libquery_engine.so.node:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - dataforge_internal
+      - dataforge_ingress
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dataforge_worker:
+    image: dataforge-backend:v0.1.0
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    container_name: dataforge_worker
+    restart: unless-stopped
+    depends_on:
+      dataforge_postgres:
+        condition: service_healthy
+      dataforge_redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      RUN_MODE: worker
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@dataforge_postgres:5432/${POSTGRES_DB:-dataforge}?schema=public
+      REDIS_URL: redis://dataforge_redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      SHELBY_MODE: ${SHELBY_MODE:-mock}
+      SHELBY_NETWORK: ${SHELBY_NETWORK:-shelbynet}
+      SHELBY_ACCOUNT: ${SHELBY_ACCOUNT:-}
+      SHELBY_PRIVATE_KEY: ${SHELBY_PRIVATE_KEY:-}
+      SHELBY_RPC_URL: ${SHELBY_RPC_URL:-https://rpc.shelby.xyz}
+      SHELBY_EXPLORER_BASE_URL: ${SHELBY_EXPLORER_BASE_URL:-https://explorer.shelby.xyz/shelbynet}
+      MAX_UPLOAD_FILE_SIZE_MB: ${MAX_UPLOAD_FILE_SIZE_MB:-25}
+      EMBEDDING_MODE: ${EMBEDDING_MODE:-mock}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      PRISMA_QUERY_ENGINE_LIBRARY: /libquery_engine.so.node
+    volumes:
+      - /opt/dataforge/storage/mock:/app/packages/shelby/storage
+      - /opt/dataforge/storage/temp-uploads:/app/apps/api/temp-uploads
+      - /opt/dataforge/env/libquery_engine.so.node:/libquery_engine.so.node:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'node apps/api/dist/main' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - dataforge_internal
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  dataforge_internal:
+    name: dataforge_internal
+    driver: bridge
+    internal: true
+  dataforge_ingress:
+    external: true
+    name: dataforge_ingress

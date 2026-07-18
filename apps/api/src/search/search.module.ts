@@ -5,6 +5,11 @@ import { SearchService } from './search.service';
 import { EmbeddingService } from './embedding.service';
 import { ReindexProcessor } from './reindex.processor';
 
+const providers: any[] = [SearchService, EmbeddingService];
+if (process.env.RUN_MODE === 'worker' || !process.env.RUN_MODE) {
+  providers.push(ReindexProcessor);
+}
+
 @Module({
   imports: [
     BullModule.registerQueue({
@@ -12,7 +17,7 @@ import { ReindexProcessor } from './reindex.processor';
     }),
   ],
   controllers: [SearchController],
-  providers: [SearchService, EmbeddingService, ReindexProcessor],
+  providers,
   exports: [SearchService, EmbeddingService, BullModule],
 })
 export class SearchModule {}

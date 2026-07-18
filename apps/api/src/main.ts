@@ -41,6 +41,12 @@ function validateEnv(): void {
 async function bootstrap() {
   validateEnv();
 
+  if (process.env.RUN_MODE === 'worker') {
+    const app = await NestFactory.createApplicationContext(AppModule);
+    Logger.log(`🚀 DataForge worker context initialized successfully.`);
+    return;
+  }
+
   const app = await NestFactory.create(AppModule);
 
   // Parse cookies
