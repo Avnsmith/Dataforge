@@ -148,6 +148,7 @@ services:
       retries: 3
     networks:
       - dataforge_internal
+      - dataforge_ingress
     deploy:
       resources:
         limits:
