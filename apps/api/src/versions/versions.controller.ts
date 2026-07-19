@@ -53,6 +53,30 @@ export class VersionsController {
     return this.versionsService.getVersionDetails(id);
   }
 
+  // 20 requests per minute for file prepares
+  @Post('versions/:id/files/prepare')
+  @UseGuards(AuthGuard)
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 25 * 1024 * 1024 } }))
+  async prepareFile(
+    @Param('id') versionId: string,
+    @UploadedFile() file: any,
+    @Body('path') filePath: string,
+    @Request() req: any
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+    if (file.size > this.maxFileSizeBytes) {
+      const maxMb = Math.floor(this.maxFileSizeBytes / (1024 * 1024));
+      throw new PayloadTooLargeException(
+        `File too large. Maximum allowed size is ${maxMb}MB. Received ${(file.size / (1024 * 1024)).toFixed(1)}MB.`
+      );
+    }
+    const targetPath = filePath || file.originalname;
+    return this.versionsService.prepareFile(versionId, targetPath, file.buffer, req.user.walletAddress);
+  }
+
   // 20 requests per minute for file uploads
   @Post('versions/:id/files/upload')
   @UseGuards(AuthGuard)
@@ -62,19 +86,25 @@ export class VersionsController {
     @Param('id') versionId: string,
     @UploadedFile() file: any,
     @Body('path') filePath: string,
+    @Body('transactionHash') transactionHash: string,
     @Request() req: any
   ) {
+    const targetPath = filePath || (file ? file.originalname : '');
+    
+    // For backward compatibility in mock mode
+    const mode = this.configService.get<string>('SHELBY_MODE') || 'mock';
+    if (mode === 'live' && !transactionHash) {
+      throw new BadRequestException('transactionHash is required in live mode');
+    }
+
+    if (transactionHash) {
+      return this.versionsService.confirmUploadFile(versionId, targetPath, transactionHash, req.user.walletAddress);
+    }
+
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    // Enforce configurable max file size (default 25MB)
-    if (file.size > this.maxFileSizeBytes) {
-      const maxMb = Math.floor(this.maxFileSizeBytes / (1024 * 1024));
-      throw new PayloadTooLargeException(
-        `File too large. Maximum allowed size is ${maxMb}MB. Received ${(file.size / (1024 * 1024)).toFixed(1)}MB.`
-      );
-    }
-    const targetPath = filePath || file.originalname;
+
     return this.versionsService.uploadFile(versionId, targetPath, file.buffer, req.user.walletAddress);
   }
 
@@ -83,15 +113,31 @@ export class VersionsController {
     return this.versionsService.getFiles(id);
   }
 
+  // 10 requests per minute for publish prepare
+  @Post('versions/:id/publish/prepare')
+  @UseGuards(AuthGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async preparePublish(
+    @Param('id') id: string,
+    @Request() req: any
+  ) {
+    return this.versionsService.preparePublish(id, req.user.walletAddress);
+  }
+
   // 10 requests per minute for publish
   @Post('versions/:id/publish')
   @UseGuards(AuthGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async publishVersion(
     @Param('id') id: string,
+    @Body('transactionHash') transactionHash: string,
     @Request() req: any
   ) {
-    return this.versionsService.publishVersion(id, req.user.walletAddress);
+    const mode = this.configService.get<string>('SHELBY_MODE') || 'mock';
+    if (mode === 'live' && !transactionHash) {
+      throw new BadRequestException('transactionHash is required in live mode');
+    }
+    return this.versionsService.publishVersion(id, transactionHash, req.user.walletAddress);
   }
 
   @Get('versions/:id/status')

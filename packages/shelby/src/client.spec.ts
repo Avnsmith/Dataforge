@@ -32,10 +32,10 @@ jest.mock('@aptos-labs/ts-sdk', () => ({
 import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import { ShelbyClient, MockShelbyProvider, LiveShelbyProvider } from './client';
+import { ShelbyClient, MockProvider, ShelbyLiveProvider } from './client';
 import { ShelbyConfig } from './types';
 
-describe('MockShelbyProvider', () => {
+describe('MockProvider', () => {
   const tempStorageDir = path.resolve(__dirname, '../temp-test-storage');
   const mockConfig: ShelbyConfig = {
     mode: 'mock',
@@ -47,10 +47,10 @@ describe('MockShelbyProvider', () => {
     storageDir: tempStorageDir,
   };
 
-  let provider: MockShelbyProvider;
+  let provider: MockProvider;
 
   beforeAll(() => {
-    provider = new MockShelbyProvider(mockConfig);
+    provider = new MockProvider(mockConfig);
   });
 
   afterAll(() => {
@@ -141,7 +141,7 @@ describe('MockShelbyProvider', () => {
   });
 });
 
-describe('LiveShelbyProvider Configuration & Fallback', () => {
+describe('ShelbyLiveProvider Configuration & Fallback', () => {
   it('should fail loudly when initializing with missing credentials', () => {
     const invalidConfig: ShelbyConfig = {
       mode: 'live',
@@ -153,7 +153,7 @@ describe('LiveShelbyProvider Configuration & Fallback', () => {
     };
 
     expect(() => {
-      new LiveShelbyProvider(invalidConfig);
+      new ShelbyLiveProvider(invalidConfig);
     }).toThrow('Shelby configuration error');
   });
 
@@ -168,12 +168,12 @@ describe('LiveShelbyProvider Configuration & Fallback', () => {
     };
 
     expect(() => {
-      new LiveShelbyProvider(invalidConfig);
+      new ShelbyLiveProvider(invalidConfig);
     }).toThrow('Shelby configuration error: Invalid SHELBY_PRIVATE_KEY format');
   });
 });
 
-describe('LiveShelbyProvider Integration Tests (Credential Checked)', () => {
+describe('ShelbyLiveProvider Integration Tests (Credential Checked)', () => {
   const hasLiveCreds =
     process.env.SHELBY_MODE === 'live' &&
     process.env.SHELBY_PRIVATE_KEY &&
@@ -186,7 +186,7 @@ describe('LiveShelbyProvider Integration Tests (Credential Checked)', () => {
       console.log('Skipping Live integration tests (no live credentials found in .env)');
     });
   } else {
-    let liveProvider: LiveShelbyProvider;
+    let liveProvider: ShelbyLiveProvider;
 
     beforeAll(() => {
       const liveConfig: ShelbyConfig = {
@@ -198,7 +198,7 @@ describe('LiveShelbyProvider Integration Tests (Credential Checked)', () => {
         explorerBaseUrl: process.env.SHELBY_EXPLORER_BASE_URL || 'https://explorer.shelby.xyz',
         apiKey: process.env.SHELBY_API_KEY,
       };
-      liveProvider = new LiveShelbyProvider(liveConfig);
+      liveProvider = new ShelbyLiveProvider(liveConfig);
     });
 
     it('should connect to the live network and upload/download a test blob', async () => {

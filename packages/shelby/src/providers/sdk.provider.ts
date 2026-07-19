@@ -29,7 +29,7 @@ async function importSdkNode() {
   return importFn(fileUrl);
 }
 
-export class LiveShelbyProvider implements ShelbyProvider {
+export class ShelbyLiveProvider implements ShelbyProvider {
   private config: ShelbyConfig;
   private sdkClient: any = null;
   private signer: any;

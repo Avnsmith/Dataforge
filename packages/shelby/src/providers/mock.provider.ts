@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 import { ShelbyProvider } from '../provider';
 import { ShelbyConfig, ShelbyUploadResult, ShelbyBlobMetadata, ShelbyVerificationResult } from '../types';
 
-export class MockShelbyProvider implements ShelbyProvider {
+export class MockProvider implements ShelbyProvider {
   private storagePath: string;
   private config: ShelbyConfig;
 

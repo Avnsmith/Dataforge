@@ -251,6 +251,11 @@ Licensed under ${version.dataset.license || 'proprietary'} rules.
             manifestHash,
             manifestShelbyBlobName: manifestResult.blobName,
             manifestShelbyMerkleRoot: manifestResult.merkleRoot,
+            provider: this.configService.get<string>('SHELBY_MODE') || 'mock',
+            providerStatus: 'ready',
+            providerManifestCid: manifestResult.merkleRoot,
+            providerCommitHash: version.providerTxHash || null,
+            providerTimestamp: new Date(),
           },
         });
 

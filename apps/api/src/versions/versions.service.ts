@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -12,6 +12,7 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class VersionsService {
+  private readonly logger = new Logger(VersionsService.name);
   private shelbyClient: ShelbyClient;
   private tempUploadPath: string;
 
@@ -208,7 +209,7 @@ export class VersionsService {
     });
   }
 
-  async publishVersion(versionId: string, walletAddress?: string): Promise<DatasetVersion> {
+  async publishVersion(versionId: string, transactionHash?: string, walletAddress?: string): Promise<DatasetVersion> {
     const user = await this.getRequiredUser(walletAddress);
     const version = await prisma.datasetVersion.findUnique({
       where: { id: versionId },
@@ -227,10 +228,33 @@ export class VersionsService {
       throw new BadRequestException('Cannot publish a version with no files. Please upload files first.');
     }
 
-    // Update status to processing
+    const mode = this.configService.get<string>('SHELBY_MODE') || 'mock';
+    if (mode === 'live' && !transactionHash) {
+      throw new BadRequestException('transactionHash is required in live mode');
+    }
+
+    if (mode === 'live' && transactionHash) {
+      const isTxValid = await this.verifyAptosTransaction(
+        transactionHash,
+        user.walletAddress,
+        '',
+        0n
+      );
+      if (!isTxValid) {
+        throw new BadRequestException('On-chain transaction verification failed for manifest publish.');
+      }
+    }
+
+    // Update status to processing and save transaction metadata
     const updated = await prisma.datasetVersion.update({
       where: { id: versionId },
-      data: { status: 'processing' },
+      data: {
+        status: 'processing',
+        provider: mode,
+        providerTxHash: transactionHash || null,
+        providerStatus: 'processing',
+        providerTimestamp: new Date(),
+      },
     });
 
     // Add processing job to BullMQ with retries & backoff configuration
@@ -500,5 +524,469 @@ export class VersionsService {
     }
 
     return resolvedPath;
+  }
+
+  async verifyAptosTransaction(
+    txHash: string,
+    expectedSender: string,
+    expectedMerkleRoot: string,
+    expectedSize: bigint
+  ): Promise<boolean> {
+    const mode = this.configService.get<string>('SHELBY_MODE') || 'mock';
+    if (mode === 'mock') {
+      return true;
+    }
+
+    try {
+      const { Aptos, AptosConfig } = require('@aptos-labs/ts-sdk');
+      const network = this.configService.get<string>('SHELBY_NETWORK') || 'shelbynet';
+      
+      const aptosConfig = new AptosConfig({
+        network: network as any,
+        clientConfig: {
+          API_KEY: this.configService.get<string>('SHELBY_API_KEY')
+        }
+      });
+      const aptos = new Aptos(aptosConfig);
+
+      // Fetch transaction
+      const tx = await aptos.getTransactionByHash({ transactionHash: txHash });
+      if (!tx || !tx.success) {
+        return false;
+      }
+
+      // Verify sender
+      const cleanSender = tx.sender.toLowerCase();
+      const cleanExpectedSender = expectedSender.toLowerCase();
+      if (cleanSender !== cleanExpectedSender) {
+        return false;
+      }
+
+      // Verify function payload
+      const payload = tx.payload;
+      if (!payload || payload.type !== 'entry_function_payload') {
+        return false;
+      }
+
+      const funcName = payload.function;
+      const expectedFuncPrefix = '::blob_metadata::register_blob';
+      if (!funcName.includes(expectedFuncPrefix)) {
+        return false;
+      }
+
+      // Verify arguments
+      // payload.arguments: [blobName, expirationMicros, blobMerkleRoot, numChunksets, blobSize, paymentTier, encoding]
+      const args = payload.arguments;
+      if (!args || args.length < 5) {
+        return false;
+      }
+
+      // Normalize Merkle Root comparison if expected is not empty
+      if (expectedMerkleRoot) {
+        const onChainMerkle = args[2].replace(/^0x/i, '').toLowerCase();
+        const cleanExpectedMerkle = expectedMerkleRoot.replace(/^0x/i, '').toLowerCase();
+        if (onChainMerkle !== cleanExpectedMerkle) {
+          return false;
+        }
+      }
+
+      // Compare size if expected is not 0
+      if (expectedSize > 0n) {
+        const onChainSize = BigInt(args[4]);
+        if (onChainSize !== expectedSize) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      this.logger.error(`Aptos transaction verification failed for txHash=${txHash}: ${e.message}`, e.stack);
+      return false;
+    }
+  }
+
+  async prepareFile(
+    versionId: string,
+    filePath: string,
+    fileBuffer: Buffer,
+    walletAddress?: string
+  ): Promise<any> {
+    const user = await this.getRequiredUser(walletAddress);
+    
+    // Path and traversal validations
+    if (!filePath || filePath.trim() === '') {
+      throw new BadRequestException('File path cannot be empty');
+    }
+    if (filePath.includes('\0')) {
+      throw new BadRequestException('File path cannot contain null bytes');
+    }
+    if (filePath.includes('\\')) {
+      throw new BadRequestException('Backslash is not allowed in file paths');
+    }
+    if (path.isAbsolute(filePath)) {
+      throw new BadRequestException('Absolute paths are not allowed');
+    }
+    if (filePath.includes('..')) {
+      throw new BadRequestException('Path traversal sequences (..) are not allowed');
+    }
+    if (/^[a-zA-Z]:[/\\]/.test(filePath)) {
+      throw new BadRequestException('Windows absolute paths are not allowed');
+    }
+
+    // Whitelist check
+    const allowedExtensions = ['.csv', '.json', '.md', '.txt', '.png', '.jpg', '.jpeg', '.webp', '.pdf', '.zip', '.parquet', '.h5', '.bin'];
+    const fileExt = path.extname(filePath).toLowerCase();
+    if (!allowedExtensions.includes(fileExt)) {
+      throw new BadRequestException(`File extension '${fileExt}' is not allowed.`);
+    }
+
+    const version = await prisma.datasetVersion.findUnique({
+      where: { id: versionId },
+      include: { dataset: { include: { owner: true } } },
+    });
+
+    if (!version) {
+      throw new NotFoundException('Version not found');
+    }
+
+    if (version.dataset.ownerId !== user.id) {
+      throw new UnauthorizedException('You do not own this dataset');
+    }
+
+    if (version.status !== 'draft' && version.status !== 'uploading') {
+      throw new BadRequestException('Files can only be prepared for draft or uploading versions');
+    }
+
+    // 1. Calculate commitments
+    const size = fileBuffer.length;
+    const sha256 = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+    
+    let merkleRoot = sha256;
+    let numChunksets = 1;
+    let expirationMicros = (Date.now() + 365 * 24 * 60 * 60 * 1000) * 1000;
+    let encodingIndex = 0;
+    
+    const mode = this.configService.get<string>('SHELBY_MODE') || 'mock';
+    if (mode === 'live') {
+      try {
+        const { createDefaultErasureCodingProvider, generateCommitments, defaultErasureCodingConfig, expectedTotalChunksets } = await this.importSdkNode();
+        const provider = await createDefaultErasureCodingProvider();
+        const commitments = await generateCommitments(provider, fileBuffer);
+        merkleRoot = commitments.blob_merkle_root;
+        
+        const config = defaultErasureCodingConfig();
+        const chunksetSize = config.chunkSizeBytes * config.erasure_k;
+        numChunksets = expectedTotalChunksets(size, chunksetSize);
+        encodingIndex = config.enumIndex;
+      } catch (err: any) {
+        throw new BadRequestException(`Failed to generate commitments: ${err.message}`);
+      }
+    } else {
+      // Mock mode
+      merkleRoot = crypto.createHash('sha256').update(`shelby-merkle:${sha256}`).digest('hex');
+    }
+
+    const cleanPath = filePath.replace(/^\/+|\/+$/g, '');
+    const blobName = this.shelbyClient.buildShelbyBlobName({
+      owner: version.dataset.owner.walletAddress,
+      slug: version.dataset.slug,
+      version: version.version,
+      path: cleanPath,
+    });
+
+    // 2. Save file temporarily in a .tmp path
+    const versionTempDir = path.join(this.tempUploadPath, versionId);
+    if (!fs.existsSync(versionTempDir)) {
+      fs.mkdirSync(versionTempDir, { recursive: true });
+    }
+    const tempFileFullPath = this.safeJoin(versionTempDir, `${cleanPath}.tmp`);
+    const dirOfTempFile = path.dirname(tempFileFullPath);
+    if (!fs.existsSync(dirOfTempFile)) {
+      fs.mkdirSync(dirOfTempFile, { recursive: true });
+    }
+    fs.writeFileSync(tempFileFullPath, fileBuffer);
+
+    // 3. Construct Move transaction payload
+    const payload = {
+      function: '0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a::blob_metadata::register_blob',
+      type_arguments: [],
+      arguments: [
+        blobName,
+        expirationMicros.toString(),
+        merkleRoot.startsWith('0x') ? merkleRoot : `0x${merkleRoot}`,
+        numChunksets,
+        size.toString(),
+        0,
+        encodingIndex
+      ]
+    };
+
+    return {
+      blobName,
+      merkleRoot,
+      size,
+      numChunksets,
+      expirationMicros,
+      payload
+    };
+  }
+
+  async confirmUploadFile(
+    versionId: string,
+    filePath: string,
+    transactionHash: string,
+    walletAddress?: string
+  ): Promise<DatasetFile> {
+    const user = await this.getRequiredUser(walletAddress);
+    
+    const version = await prisma.datasetVersion.findUnique({
+      where: { id: versionId },
+      include: { dataset: { include: { owner: true } } },
+    });
+
+    if (!version) {
+      throw new NotFoundException('Version not found');
+    }
+
+    if (version.dataset.ownerId !== user.id) {
+      throw new UnauthorizedException('You do not own this dataset');
+    }
+
+    const cleanPath = filePath.replace(/^\/+|\/+$/g, '');
+    const versionTempDir = path.join(this.tempUploadPath, versionId);
+    const tempFileFullPath = this.safeJoin(versionTempDir, `${cleanPath}.tmp`);
+
+    if (!fs.existsSync(tempFileFullPath)) {
+      throw new BadRequestException('Staged file not found. Please call prepare first.');
+    }
+
+    const fileBuffer = fs.readFileSync(tempFileFullPath);
+    const size = fileBuffer.length;
+    const sha256 = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+
+    // Calculate expected Merkle Root
+    let merkleRoot = sha256;
+    const mode = this.configService.get<string>('SHELBY_MODE') || 'mock';
+    if (mode === 'live') {
+      try {
+        const { createDefaultErasureCodingProvider, generateCommitments } = await this.importSdkNode();
+        const provider = await createDefaultErasureCodingProvider();
+        const commitments = await generateCommitments(provider, fileBuffer);
+        merkleRoot = commitments.blob_merkle_root;
+      } catch (err: any) {
+        throw new BadRequestException(`Failed to generate commitments: ${err.message}`);
+      }
+    } else {
+      merkleRoot = crypto.createHash('sha256').update(`shelby-merkle:${sha256}`).digest('hex');
+    }
+
+    // 1. Verify transaction on-chain
+    const isTxValid = await this.verifyAptosTransaction(
+      transactionHash,
+      user.walletAddress,
+      merkleRoot,
+      BigInt(size)
+    );
+
+    if (!isTxValid) {
+      throw new BadRequestException('On-chain transaction verification failed or is not confirmed yet.');
+    }
+
+    // Rename file from .tmp to proper name
+    const finalFileFullPath = this.safeJoin(versionTempDir, cleanPath);
+    const dirOfFinalFile = path.dirname(finalFileFullPath);
+    if (!fs.existsSync(dirOfFinalFile)) {
+      fs.mkdirSync(dirOfFinalFile, { recursive: true });
+    }
+    fs.renameSync(tempFileFullPath, finalFileFullPath);
+
+    const shelbyBlobName = this.shelbyClient.buildShelbyBlobName({
+      owner: version.dataset.owner.walletAddress,
+      slug: version.dataset.slug,
+      version: version.version,
+      path: cleanPath,
+    });
+
+    // Check if file already exists in this version
+    const existingFile = await prisma.datasetFile.findFirst({
+      where: { versionId, path: cleanPath },
+    });
+
+    const fileData = {
+      size: BigInt(size),
+      sha256,
+      shelbyBlobName,
+      shelbyAccount: user.walletAddress,
+      shelbyMerkleRoot: merkleRoot,
+      explorerUrl: this.shelbyClient.buildExplorerUrl(shelbyBlobName)
+    };
+
+    if (existingFile) {
+      return prisma.datasetFile.update({
+        where: { id: existingFile.id },
+        data: fileData,
+      });
+    }
+
+    return prisma.datasetFile.create({
+      data: {
+        versionId,
+        path: cleanPath,
+        ...fileData,
+      },
+    });
+  }
+
+  async preparePublish(versionId: string, walletAddress?: string): Promise<any> {
+    const user = await this.getRequiredUser(walletAddress);
+    const version = await prisma.datasetVersion.findUnique({
+      where: { id: versionId },
+      include: {
+        dataset: {
+          include: { owner: true }
+        },
+        files: true,
+      },
+    });
+
+    if (!version) {
+      throw new NotFoundException('Version not found');
+    }
+
+    if (version.dataset.ownerId !== user.id) {
+      throw new UnauthorizedException('You do not own this dataset');
+    }
+
+    if (version.files.length === 0) {
+      throw new BadRequestException('Cannot publish a version with no files. Please upload files first.');
+    }
+
+    // Build manifest exactly as the worker does
+    const manifestFiles = version.files.map(f => ({
+      path: f.path,
+      sha256: f.sha256,
+      size: Number(f.size),
+      mimeType: f.mimeType || 'application/octet-stream',
+      shelbyBlobName: f.shelbyBlobName,
+      shelbyMerkleRoot: f.shelbyMerkleRoot || '',
+    }));
+
+    // Resolve Lineage metadata
+    const lineageRecords = await prisma.datasetLineage.findMany({
+      where: { childVersionId: version.id },
+      include: {
+        parentVersion: {
+          include: {
+            dataset: {
+              include: { owner: true }
+            }
+          }
+        }
+      }
+    });
+
+    const manifestLineage = lineageRecords.map((lin: any) => ({
+      relationType: lin.relationType,
+      parentDataset: `${lin.parentVersion.dataset.owner.username || lin.parentVersion.dataset.owner.walletAddress}/${lin.parentVersion.dataset.slug}`,
+      parentVersion: lin.parentVersion.version,
+    }));
+
+    const { recommendTags, detectDatasetType } = require('@dataforge/ai');
+    const manifest = {
+      schemaVersion: '1.0',
+      name: version.dataset.name,
+      version: version.version,
+      owner: version.dataset.owner.username || version.dataset.owner.walletAddress,
+      license: version.dataset.license || 'MIT',
+      type: detectDatasetType(version.files),
+      tags: recommendTags(version.files.map(f => ({ path: f.path, size: Number(f.size) }))),
+      createdAt: version.createdAt.toISOString(),
+      files: manifestFiles,
+      lineage: manifestLineage,
+    };
+
+    const manifestString = JSON.stringify(manifest, null, 2);
+    const size = Buffer.from(manifestString, 'utf-8').length;
+    const sha256 = crypto.createHash('sha256').update(manifestString).digest('hex');
+
+    let merkleRoot = sha256;
+    let numChunksets = 1;
+    let expirationMicros = (Date.now() + 365 * 24 * 60 * 60 * 1000) * 1000;
+    let encodingIndex = 0;
+
+    const mode = this.configService.get<string>('SHELBY_MODE') || 'mock';
+    if (mode === 'live') {
+      try {
+        const { createDefaultErasureCodingProvider, generateCommitments, defaultErasureCodingConfig, expectedTotalChunksets } = await this.importSdkNode();
+        const provider = await createDefaultErasureCodingProvider();
+        const commitments = await generateCommitments(provider, Buffer.from(manifestString, 'utf-8'));
+        merkleRoot = commitments.blob_merkle_root;
+
+        const config = defaultErasureCodingConfig();
+        const chunksetSize = config.chunkSizeBytes * config.erasure_k;
+        numChunksets = expectedTotalChunksets(size, chunksetSize);
+        encodingIndex = config.enumIndex;
+      } catch (err: any) {
+        throw new BadRequestException(`Failed to generate commitments: ${err.message}`);
+      }
+    } else {
+      merkleRoot = crypto.createHash('sha256').update(`shelby-merkle:${sha256}`).digest('hex');
+    }
+
+    const blobName = this.shelbyClient.buildShelbyBlobName({
+      owner: version.dataset.owner.walletAddress,
+      slug: version.dataset.slug,
+      version: version.version,
+      path: 'manifest.json',
+    });
+
+    const payload = {
+      function: '0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a::blob_metadata::register_blob',
+      type_arguments: [],
+      arguments: [
+        blobName,
+        expirationMicros.toString(),
+        merkleRoot.startsWith('0x') ? merkleRoot : `0x${merkleRoot}`,
+        numChunksets,
+        size.toString(),
+        0,
+        encodingIndex
+      ]
+    };
+
+    return {
+      blobName,
+      merkleRoot,
+      size,
+      numChunksets,
+      expirationMicros,
+      payload
+    };
+  }
+
+  // Helper function to import SDK
+  private async importSdkNode() {
+    const path = require('path');
+    const fs = require('fs');
+    const { pathToFileURL } = require('url');
+    let current = __dirname;
+    let sdkDir = '';
+    while (true) {
+      const target = path.join(current, 'node_modules', '@shelby-protocol', 'sdk');
+      if (fs.existsSync(target)) {
+        sdkDir = target;
+        break;
+      }
+      const parent = path.dirname(current);
+      if (parent === current) {
+        sdkDir = '/app/node_modules/@shelby-protocol/sdk';
+        break;
+      }
+      current = parent;
+    }
+    const nodeIndexMjs = path.join(sdkDir, 'dist', 'node', 'index.mjs');
+    const fileUrl = pathToFileURL(nodeIndexMjs).href;
+    const importFn = new Function('url', 'return import(url)');
+    return importFn(fileUrl);
   }
 }

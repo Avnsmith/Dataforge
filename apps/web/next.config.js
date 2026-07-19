@@ -3,6 +3,16 @@ const { withSentryConfig } = require('@sentry/nextjs');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/api/:path*',
+          destination: 'http://152.42.215.193:4000/api/:path*',
+        },
+      ],
+    };
+  },
 };
 
 module.exports = withSentryConfig(

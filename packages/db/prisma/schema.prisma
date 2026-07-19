@@ -50,6 +50,12 @@ model DatasetVersion {
   manifestHash             String?
   manifestShelbyBlobName   String?
   manifestShelbyMerkleRoot String?
+  provider                 String?  @default("live")
+  providerTxHash           String?
+  providerManifestCid      String?
+  providerCommitHash       String?
+  providerStatus           String?
+  providerTimestamp        DateTime?
   createdAt                DateTime @default(now())
   dataset                  Dataset @relation(fields: [datasetId], references: [id])
   files                    DatasetFile[]

@@ -1,7 +1,7 @@
 import { ShelbyConfig, ShelbyUploadResult, ShelbyBlobMetadata, ShelbyVerificationResult } from './types';
 import { ShelbyProvider } from './provider';
-import { MockShelbyProvider } from './providers/mock.provider';
-import { LiveShelbyProvider } from './providers/sdk.provider';
+import { MockProvider } from './providers/mock.provider';
+import { ShelbyLiveProvider } from './providers/sdk.provider';
 
 export * from './provider';
 export * from './types';
@@ -21,9 +21,9 @@ export class ShelbyClient {
     }
 
     if (config.mode === 'mock') {
-      this.provider = new MockShelbyProvider(config);
+      this.provider = new MockProvider(config);
     } else {
-      this.provider = new LiveShelbyProvider(config);
+      this.provider = new ShelbyLiveProvider(config);
     }
   }
 
