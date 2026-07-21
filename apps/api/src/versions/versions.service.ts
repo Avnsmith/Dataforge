@@ -537,6 +537,8 @@ export class VersionsService {
       return true;
     }
 
+    this.logger.log(`Aptos transaction verification started for txHash=${txHash}...`);
+
     try {
       const { Aptos, AptosConfig } = require('@aptos-labs/ts-sdk');
       const network = this.configService.get<string>('SHELBY_NETWORK') || 'shelbynet';
@@ -549,9 +551,36 @@ export class VersionsService {
       });
       const aptos = new Aptos(aptosConfig);
 
-      // Fetch transaction
-      const tx = await aptos.getTransactionByHash({ transactionHash: txHash });
-      if (!tx || !tx.success) {
+      const timeoutMs = 30000;
+      const startTime = Date.now();
+      let tx = null;
+
+      while (Date.now() - startTime < timeoutMs) {
+        try {
+          this.logger.log(`Waiting for transaction ${txHash} to be indexed/finalized on-chain...`);
+          tx = await aptos.getTransactionByHash({ transactionHash: txHash });
+          if (tx) {
+            this.logger.log(`Transaction ${txHash} found on-chain.`);
+            break;
+          }
+        } catch (e) {
+          const errMsg = e.message || '';
+          if (errMsg.includes('transaction_not_found') || errMsg.includes('404')) {
+            this.logger.log(`Transaction ${txHash} not indexed yet. Retrying in 1s...`);
+          } else {
+            this.logger.warn(`Unexpected error while checking transaction ${txHash}: ${e.message}`);
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+
+      if (!tx) {
+        this.logger.error(`Aptos transaction confirmation timed out for txHash=${txHash}`);
+        return false;
+      }
+
+      if (!tx.success) {
+        this.logger.error(`Aptos transaction ${txHash} failed on-chain.`);
         return false;
       }
 
@@ -559,25 +588,28 @@ export class VersionsService {
       const cleanSender = tx.sender.toLowerCase();
       const cleanExpectedSender = expectedSender.toLowerCase();
       if (cleanSender !== cleanExpectedSender) {
+        this.logger.warn(`Sender mismatch for txHash=${txHash}: expected=${cleanExpectedSender}, actual=${cleanSender}`);
         return false;
       }
 
       // Verify function payload
       const payload = tx.payload;
       if (!payload || payload.type !== 'entry_function_payload') {
+        this.logger.warn(`Invalid transaction payload type for txHash=${txHash}: ${payload?.type}`);
         return false;
       }
 
       const funcName = payload.function;
       const expectedFuncPrefix = '::blob_metadata::register_blob';
       if (!funcName.includes(expectedFuncPrefix)) {
+        this.logger.warn(`Invalid transaction function for txHash=${txHash}: ${funcName}`);
         return false;
       }
 
       // Verify arguments
-      // payload.arguments: [blobName, expirationMicros, blobMerkleRoot, numChunksets, blobSize, paymentTier, encoding]
       const args = payload.arguments;
       if (!args || args.length < 5) {
+        this.logger.warn(`Invalid transaction arguments length for txHash=${txHash}: ${args?.length}`);
         return false;
       }
 
@@ -586,6 +618,7 @@ export class VersionsService {
         const onChainMerkle = args[2].replace(/^0x/i, '').toLowerCase();
         const cleanExpectedMerkle = expectedMerkleRoot.replace(/^0x/i, '').toLowerCase();
         if (onChainMerkle !== cleanExpectedMerkle) {
+          this.logger.warn(`Merkle root mismatch for txHash=${txHash}: expected=${cleanExpectedMerkle}, actual=${onChainMerkle}`);
           return false;
         }
       }
@@ -594,10 +627,12 @@ export class VersionsService {
       if (expectedSize > 0n) {
         const onChainSize = BigInt(args[4]);
         if (onChainSize !== expectedSize) {
+          this.logger.warn(`Size mismatch for txHash=${txHash}: expected=${expectedSize}, actual=${onChainSize}`);
           return false;
         }
       }
 
+      this.logger.log(`Transaction ${txHash} verification passed.`);
       return true;
     } catch (e) {
       this.logger.error(`Aptos transaction verification failed for txHash=${txHash}: ${e.message}`, e.stack);
