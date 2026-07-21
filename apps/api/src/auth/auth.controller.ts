@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Headers, UnauthorizedException, HttpCode, HttpStatus, Req, BadRequestException, Res, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Headers, UnauthorizedException, HttpCode, HttpStatus, Req, BadRequestException, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
@@ -35,7 +35,6 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async verifySignature(
     @Body() body: VerifySignatureDto,
-    @Res({ passthrough: true }) res: Response,
   ) {
     const { user, token } = await this.authService.loginWithWalletSignature(
       body.walletAddress,
@@ -43,16 +42,6 @@ export class AuthController {
       body.signature,
       body.message,
     );
-
-    const isProdOrStaging = this.configService.get<string>('NODE_ENV') === 'production' ||
-      this.configService.get<string>('NODE_ENV') === 'staging';
-
-    res.cookie('df_token', token, {
-      httpOnly: true,
-      secure: isProdOrStaging,
-      sameSite: isProdOrStaging ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
 
     return { user, token };
   }
@@ -63,7 +52,6 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async authWallet(
     @Body() body: { walletAddress: string; publicKey?: string; signature?: string; message?: string },
-    @Res({ passthrough: true }) res: Response,
   ) {
     const authMode = this.configService.get<string>('AUTH_MODE') || 'mock';
     let authResult: { user: any; token: string };
@@ -82,27 +70,7 @@ export class AuthController {
       authResult = await this.authService.loginWithWalletMock(body.walletAddress);
     }
 
-    const isProdOrStaging = this.configService.get<string>('NODE_ENV') === 'production' ||
-      this.configService.get<string>('NODE_ENV') === 'staging';
-
-    res.cookie('df_token', authResult.token, {
-      httpOnly: true,
-      secure: isProdOrStaging,
-      sameSite: isProdOrStaging ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
     return authResult;
-  }
-
-  @Get('session')
-  @UseGuards(AuthGuard)
-  async getSession(@Req() req: any) {
-    const user = await this.authService.getCurrentUser(req.user.walletAddress);
-    if (!user) {
-      throw new UnauthorizedException('User session not found');
-    }
-    return { user };
   }
 
   @Get('me')

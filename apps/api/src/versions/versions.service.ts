@@ -866,7 +866,7 @@ export class VersionsService {
       path: f.path,
       sha256: f.sha256,
       size: Number(f.size),
-      mimeType: f.mimeType || 'application/octet-stream',
+      mimeType: f.mimeType || this.detectMimeType(f.path),
       shelbyBlobName: f.shelbyBlobName,
       shelbyMerkleRoot: f.shelbyMerkleRoot || '',
     }));
@@ -988,5 +988,22 @@ export class VersionsService {
     const fileUrl = pathToFileURL(nodeIndexMjs).href;
     const importFn = new Function('url', 'return import(url)');
     return importFn(fileUrl);
+  }
+
+  private detectMimeType(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.csv': 'text/csv',
+      '.json': 'application/json',
+      '.txt': 'text/plain',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.webp': 'image/webp',
+      '.pdf': 'application/pdf',
+      '.parquet': 'application/octet-stream',
+      '.zip': 'application/zip',
+    };
+    return mimeMap[ext] || 'application/octet-stream';
   }
 }

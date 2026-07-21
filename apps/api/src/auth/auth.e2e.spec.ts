@@ -77,12 +77,11 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
       publicKey,
       signature,
       message,
-    }, mockRes);
+    });
 
     expect(loginResult.token).toBeDefined();
     expect(loginResult.user).toBeDefined();
     expect(loginResult.user.walletAddress).toBe(walletAddress.toLowerCase());
-    expect(mockRes.cookie).toHaveBeenCalled();
 
     // 5. Replay Attack Protection: verify using the same nonce fails
     await expect(
@@ -91,7 +90,7 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
         publicKey,
         signature,
         message,
-      }, mockRes)
+      })
     ).rejects.toThrow(BadRequestException);
 
     // 6. Wrong signature check: verify it fails
@@ -104,7 +103,7 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
         publicKey,
         signature: invalidSignature,
         message: newMessage,
-      }, mockRes)
+      })
     ).rejects.toThrow(BadRequestException);
 
     // 7. Wrong address mismatch check: verify it fails
@@ -122,7 +121,7 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
         publicKey,
         signature: anotherSig,
         message: anotherMessage,
-      }, mockRes)
+      })
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -153,7 +152,7 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
         publicKey,
         signature,
         message,
-      }, mockRes)
+      })
     ).rejects.toThrow(BadRequestException);
   });
 });

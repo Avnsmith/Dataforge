@@ -1,4 +1,4 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -9,7 +9,6 @@ import { DatasetsModule } from './datasets/datasets.module';
 import { VersionsModule } from './versions/versions.module';
 import { SearchModule } from './search/search.module';
 import { AppController } from './app.controller';
-import { CsrfMiddleware } from './auth/csrf.middleware';
 
 @Module({
   controllers: [AppController],
@@ -74,10 +73,4 @@ import { CsrfMiddleware } from './auth/csrf.middleware';
     SearchModule,
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(CsrfMiddleware)
-      .forRoutes('*');
-  }
-}
+export class AppModule {}

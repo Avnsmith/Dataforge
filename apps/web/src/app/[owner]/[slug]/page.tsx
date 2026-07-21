@@ -24,6 +24,12 @@ import {
  Trash2,
 } from 'lucide-react';
 
+const hexToUint8Array = (hexString: string): Uint8Array => {
+  const cleanHex = hexString.replace(/^0x/i, '');
+  const pairs = cleanHex.match(/.{1,2}/g) || [];
+  return new Uint8Array(pairs.map(byte => parseInt(byte, 16)));
+};
+
 interface DatasetFile {
  id: string;
  path: string;
@@ -80,7 +86,7 @@ export default function DatasetDetailPage() {
  const searchParams = useSearchParams();
  const queryVersion = searchParams.get('v');
  const queryClient = useQueryClient();
- const { walletAddress, isConnected, user, token } = useAuth();
+ const { walletAddress, isConnected, user, token, isRestoring } = useAuth();
  const { signAndSubmitTransaction, connected } = useWallet();
 
  const [activeTab, setActiveTab] = useState<'files' | 'versions' | 'upload' | 'settings'>('files');
@@ -243,11 +249,16 @@ export default function DatasetDetailPage() {
         let txHash = '';
         if (connected && signAndSubmitTransaction) {
           try {
+            const convertedArgs = [...prepData.payload.arguments];
+            if (typeof convertedArgs[2] === 'string' && convertedArgs[2].startsWith('0x')) {
+              convertedArgs[2] = hexToUint8Array(convertedArgs[2]);
+            }
+
             const txResult = await signAndSubmitTransaction({
               data: {
                 function: prepData.payload.function,
                 typeArguments: prepData.payload.type_arguments,
-                functionArguments: prepData.payload.arguments
+                functionArguments: convertedArgs
               }
             });
             txHash = txResult.hash;
@@ -311,11 +322,16 @@ export default function DatasetDetailPage() {
       let txHash = '';
       if (connected && signAndSubmitTransaction) {
         try {
+          const convertedArgs = [...prepData.payload.arguments];
+          if (typeof convertedArgs[2] === 'string' && convertedArgs[2].startsWith('0x')) {
+            convertedArgs[2] = hexToUint8Array(convertedArgs[2]);
+          }
+
           const txResult = await signAndSubmitTransaction({
             data: {
               function: prepData.payload.function,
               typeArguments: prepData.payload.type_arguments,
-              functionArguments: prepData.payload.arguments
+              functionArguments: convertedArgs
             }
           });
           txHash = txResult.hash;
@@ -421,7 +437,7 @@ export default function DatasetDetailPage() {
        <div className="flex items-center gap-3 self-start md:self-center">
          <button
            onClick={() => forkMutation.mutate()}
-           disabled={forkMutation.isPending || !isConnected}
+           disabled={forkMutation.isPending || !isConnected || isRestoring}
            className="flex items-center gap-1.5 h-10 px-4 rounded-md bg-slate-900 border border-slate-800 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-all disabled:opacity-50"
          >
            <GitFork className="h-4 w-4" />
@@ -960,7 +976,7 @@ export default function DatasetDetailPage() {
 
              <button
                type="submit"
-               disabled={isCreatingVersion || !newVersionString}
+               disabled={isCreatingVersion || !newVersionString || isRestoring || !token}
                className="w-full h-9 rounded btn-gradient text-xs font-bold text-white transition-all disabled:opacity-50"
              >
                {isCreatingVersion ? 'Creating Draft...' : 'Create Draft'}
@@ -1002,7 +1018,8 @@ export default function DatasetDetailPage() {
                {uploadFiles && (
                  <button
                    onClick={handleFileUpload}
-                   className="w-full h-9 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-200 transition-all"
+                   disabled={isRestoring || !token}
+                   className="w-full h-9 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-bold text-slate-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                  >
                    Send Selected Files to Backend
                  </button>
@@ -1039,7 +1056,7 @@ export default function DatasetDetailPage() {
                  
                  <button
                    onClick={handlePublishVersion}
-                   disabled={isPublishing || activeVersion.files?.length === 0}
+                   disabled={isPublishing || activeVersion.files?.length === 0 || isRestoring || !token}
                    className="w-full h-10 rounded bg-[#0b1424] hover:bg-[#0f1b30] border border-cyan-900/30 text-xs font-bold text-cyan-400 shadow-md transition-all disabled:opacity-50"
                  >
                    {isPublishing ? 'Queueing job...' : 'Publish Version to Shelby'}

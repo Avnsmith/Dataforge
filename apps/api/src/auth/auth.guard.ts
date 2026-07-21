@@ -7,23 +7,20 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    
-    let token = request.cookies?.df_token;
+    const authHeader = request.headers.authorization;
 
-    if (!token && request.headers.authorization) {
-      const [type, headerToken] = request.headers.authorization.split(' ');
-      if (type === 'Bearer' && headerToken) {
-        token = headerToken;
-      }
+    if (!authHeader) {
+      throw new UnauthorizedException('Missing Authorization header');
     }
 
-    if (!token) {
-      throw new UnauthorizedException('Missing authentication token (cookie or Bearer header)');
+    const [type, token] = authHeader.split(' ');
+    if (type !== 'Bearer' || !token) {
+      throw new UnauthorizedException('Invalid Authorization header format. Expected Bearer <JWT>');
     }
 
     const decoded = await this.authService.verifyToken(token);
     if (!decoded) {
-      throw new UnauthorizedException('Invalid or expired authentication session');
+      throw new UnauthorizedException('Invalid or expired authentication token');
     }
 
     // Attach user profile metadata to the request

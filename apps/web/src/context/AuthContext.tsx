@@ -11,6 +11,7 @@ interface AuthContextType {
   token: string | null;
   isConnected: boolean;
   isConnecting: boolean;
+  isRestoring: boolean;
   connectMockWallet: () => Promise<void>;
   connectRealWallet: (walletName: any) => Promise<void>;
   disconnectWallet: () => void;
@@ -31,58 +32,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isConnectingState, setIsConnectingState] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
 
   // Computed connecting state: combines local API auth flow state with adapter connecting state
   const isConnecting = isConnectingState || isLoading;
 
-  // 1. Restore legacy mock session from localStorage on init
+  // 1. Restore session from sessionStorage on page load
   useEffect(() => {
-    const savedAddress = localStorage.getItem('df_wallet_address');
-    const savedUser = localStorage.getItem('df_user');
-    const savedToken = localStorage.getItem('df_token');
-    
-    if (savedAddress && savedUser && savedToken) {
-      setWalletAddress(savedAddress);
-      setToken(savedToken);
+    const restoreSession = () => {
       try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.removeItem('df_wallet_address');
-        localStorage.removeItem('df_user');
-        localStorage.removeItem('df_token');
-      }
-    }
-  }, []);
-
-  // 2. Restore secure real wallet session from HttpOnly cookie on page load
-  useEffect(() => {
-    const restoreCookieSession = async () => {
-      if (connected && account && !user) {
-        try {
-          const sessionUrl = apiUrl('/auth/session');
-          const response = await fetch(sessionUrl, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setWalletAddress(account.address.toString());
-            setUser(data.user);
-            if (data.token) {
-              setToken(data.token);
-            }
-          }
-        } catch (err) {
-          console.warn('Session restore via HttpOnly cookie failed:', err);
+        const savedAddress = sessionStorage.getItem('df_wallet_address');
+        const savedUser = sessionStorage.getItem('df_user');
+        const savedToken = sessionStorage.getItem('df_token');
+        
+        if (savedAddress && savedUser && savedToken) {
+          setWalletAddress(savedAddress);
+          setToken(savedToken);
+          setUser(JSON.parse(savedUser));
         }
+      } catch (e) {
+        console.error('Failed to restore session from sessionStorage:', e);
+        sessionStorage.removeItem('df_wallet_address');
+        sessionStorage.removeItem('df_user');
+        sessionStorage.removeItem('df_token');
+      } finally {
+        setIsRestoring(false);
       }
     };
-    restoreCookieSession();
-  }, [connected, account, user]);
+    restoreSession();
+  }, []);
 
-  // 3. Cryptographic wallet signing handler once wallet is connected
+  // 2. Cryptographic wallet signing handler once wallet is connected
   useEffect(() => {
     let active = true;
     const handleRealWalletLogin = async () => {
@@ -95,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const publicKeyStr = account.publicKey.toString();
 
           logDebug("[auth] nonce requested");
-          // 3.1 Fetch fresh nonce from backend
+          // 2.1 Fetch fresh nonce from backend
           const nonceUrl = apiUrl('/auth/nonce');
           const nonceRes = await fetch(nonceUrl, {
             method: 'POST',
@@ -109,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (!active) return;
 
-          // 3.2 Request wallet signature
+          // 2.2 Request wallet signature
           const timestamp = Date.now();
           const messageStr = `DataForge Login\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
           
@@ -121,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (!active) return;
 
-          // 3.3 Verify signature on backend
+          // 2.3 Verify signature on backend
           const verifyUrl = apiUrl('/auth/verify');
           const verifyRes = await fetch(verifyUrl, {
             method: 'POST',
@@ -143,10 +123,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const verifyData = await verifyRes.json();
 
           logDebug("[auth] session created");
-          // 3.4 Save session state
+          // 2.4 Save session state
           setWalletAddress(verifyData.user.walletAddress);
           setUser(verifyData.user);
           setToken(verifyData.token);
+
+          sessionStorage.setItem('df_wallet_address', verifyData.user.walletAddress);
+          sessionStorage.setItem('df_user', JSON.stringify(verifyData.user));
+          sessionStorage.setItem('df_token', verifyData.token);
         } catch (err: any) {
           console.error('Wallet cryptographic login failed:', err);
           alert(`Cryptographic wallet login failed.\n\nError details:\n${err.message || err}`);
@@ -196,15 +180,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      
       setWalletAddress(data.user.walletAddress);
       setUser(data.user);
       setToken(data.token);
 
-      // Save to localStorage (only allowed in mock mode)
-      localStorage.setItem('df_wallet_address', data.user.walletAddress);
-      localStorage.setItem('df_user', JSON.stringify(data.user));
-      localStorage.setItem('df_token', data.token);
+      // Save to sessionStorage
+      sessionStorage.setItem('df_wallet_address', data.user.walletAddress);
+      sessionStorage.setItem('df_user', JSON.stringify(data.user));
+      sessionStorage.setItem('df_token', data.token);
     } catch (error: any) {
       console.error('Mock wallet connection failed:', error);
       alert(`Could not connect mock wallet.\n\nError details:\n${error.message || error}`);
@@ -240,10 +223,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setToken(null);
     
-    // Clear mock localStorage
-    localStorage.removeItem('df_wallet_address');
-    localStorage.removeItem('df_user');
-    localStorage.removeItem('df_token');
+    // Clear sessionStorage
+    sessionStorage.removeItem('df_wallet_address');
+    sessionStorage.removeItem('df_user');
+    sessionStorage.removeItem('df_token');
 
     try {
       disconnect();
@@ -258,6 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         isConnected: !!walletAddress,
         isConnecting,
+        isRestoring,
         connectMockWallet,
         connectRealWallet,
         disconnectWallet,

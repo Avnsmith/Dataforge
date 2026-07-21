@@ -7,7 +7,7 @@ import { Database, Shield, Lock, FileText, HelpCircle, Wallet } from 'lucide-rea
 
 export default function NewDatasetPage() {
  const router = useRouter();
- const { walletAddress, isConnected, isConnecting, connectMockWallet, user, token } = useAuth();
+ const { walletAddress, isConnected, isConnecting, isRestoring, connectMockWallet, user, token } = useAuth();
 
  const [name, setName] = useState('');
  const [description, setDescription] = useState('');
@@ -75,6 +75,15 @@ export default function NewDatasetPage() {
      setIsSubmitting(false);
    }
  };
+
+  if (isRestoring) {
+    return (
+      <div className="max-w-md mx-auto my-16 glass p-8 rounded-2xl text-center space-y-6 border-slate-800/60 shadow-xl flex flex-col items-center justify-center min-h-[250px]">
+        <div className="h-10 w-10 rounded-full border-4 border-violet-500/30 border-t-violet-400 animate-spin mb-2" />
+        <p className="text-sm text-slate-400 font-medium">Restoring secure session...</p>
+      </div>
+    );
+  }
 
  if (!isConnected) {
    return (
@@ -268,7 +277,7 @@ export default function NewDatasetPage() {
        <div className="pt-4 flex justify-end">
          <button
            type="submit"
-           disabled={isSubmitting || !name}
+           disabled={isSubmitting || !name || isRestoring || !token}
            className="h-11 px-6 rounded-md btn-gradient text-sm font-semibold text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
          >
            {isSubmitting ? 'Creating Repository...' : 'Create Repository'}
