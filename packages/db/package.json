@@ -1,6 +1,7 @@
 {
   "name": "@dataforge/db",
   "version": "1.0.0",
+  "description": "Database schema and Prisma ORM client for DataForge AI",
   "main": "dist/client.js",
   "types": "dist/client.d.ts",
   "scripts": {

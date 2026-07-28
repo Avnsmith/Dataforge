@@ -1,6 +1,7 @@
 {
   "name": "api",
   "version": "1.0.0",
+  "description": "NestJS backend API orchestrator and ingestion service for DataForge AI",
   "private": true,
   "scripts": {
     "build": "nest build",

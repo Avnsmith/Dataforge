@@ -532,22 +532,19 @@ export class VersionsService {
     expectedMerkleRoot: string,
     expectedSize: bigint
   ): Promise<boolean> {
-    const mode = this.configService.get<string>('SHELBY_MODE') || 'mock';
-    if (mode === 'mock') {
-      return true;
+    const hexRegex = /^0x[a-fA-F0-9]{64}$/;
+    if (!hexRegex.test(txHash)) {
+      this.logger.error(`Aptos transaction verification rejected: invalid format for txHash=${txHash}`);
+      return false;
     }
 
     this.logger.log(`Aptos transaction verification started for txHash=${txHash}...`);
 
     try {
-      const { Aptos, AptosConfig } = require('@aptos-labs/ts-sdk');
-      const network = this.configService.get<string>('SHELBY_NETWORK') || 'shelbynet';
+      const { Aptos, AptosConfig, Network } = require('@aptos-labs/ts-sdk');
       
       const aptosConfig = new AptosConfig({
-        network: network as any,
-        clientConfig: {
-          API_KEY: this.configService.get<string>('SHELBY_API_KEY')
-        }
+        network: Network.TESTNET
       });
       const aptos = new Aptos(aptosConfig);
 

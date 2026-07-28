@@ -72,7 +72,7 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
     const signature = signatureObj.toString();
 
     // 4. Verify signature on backend
-    const loginResult = await authController.authWallet({
+    const loginResult = await authController.verifySignature({
       walletAddress,
       publicKey,
       signature,
@@ -85,7 +85,7 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
 
     // 5. Replay Attack Protection: verify using the same nonce fails
     await expect(
-      authController.authWallet({
+      authController.verifySignature({
         walletAddress,
         publicKey,
         signature,
@@ -98,7 +98,7 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
     const newNonce = await authService.generateNonce(walletAddress);
     const newMessage = `DataForge Login\nNonce: ${newNonce}\nTimestamp: ${Date.now()}`;
     await expect(
-      authController.authWallet({
+      authController.verifySignature({
         walletAddress,
         publicKey,
         signature: invalidSignature,
@@ -116,7 +116,7 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
     const anotherSig = account.sign(new TextEncoder().encode(anotherMessage)).toString();
 
     await expect(
-      authController.authWallet({
+      authController.verifySignature({
         walletAddress: otherAddress,
         publicKey,
         signature: anotherSig,
@@ -147,7 +147,7 @@ describe('Auth Cryptographic Signature E2E Integration', () => {
     const signature = account.sign(new TextEncoder().encode(message)).toString();
 
     await expect(
-      authController.authWallet({
+      authController.verifySignature({
         walletAddress,
         publicKey,
         signature,

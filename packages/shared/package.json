@@ -1,6 +1,7 @@
 {
   "name": "@dataforge/shared",
   "version": "1.0.0",
+  "description": "Shared DTOs, interfaces, types, and schemas for DataForge AI",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

@@ -1,7 +1,7 @@
 import './instrument';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe, ForbiddenException } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { LoggingInterceptor } from './logging.interceptor';
 import * as express from 'express';
@@ -105,7 +105,7 @@ async function bootstrap() {
   const allowedOrigins = new Set<string>();
   const addOrigin = (o: string) => {
     if (!o) return;
-    const clean = o.trim().replace(/\/$/, '');
+    const clean = o.trim().replace(/\/$/, '').toLowerCase();
     if (clean) allowedOrigins.add(clean);
   };
 
@@ -126,7 +126,31 @@ async function bootstrap() {
     addOrigin('http://127.0.0.1:3000');
   }
 
-  Logger.log(`Allowed CORS origins: ${Array.from(allowedOrigins).join(', ')}`);
+  // Pattern matching check for local development and Vercel deployments
+  const isAllowedPattern = (origin: string): boolean => {
+    const clean = origin.trim().replace(/\/$/, '').toLowerCase();
+    
+    // 1. Direct match in allowedOrigins Set
+    if (allowedOrigins.has(clean)) {
+      return true;
+    }
+    
+    // 2. Localhost and loopback check (with any port)
+    const localPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+    if (localPattern.test(clean)) {
+      return true;
+    }
+    
+    // 3. Vercel deployment check: all *.vercel.app origins
+    const vercelPattern = /^https:\/\/([a-zA-Z0-9-]+\.)*vercel\.app$/;
+    if (vercelPattern.test(clean)) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  Logger.log(`Allowed CORS static origins: ${Array.from(allowedOrigins).join(', ')}`);
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -135,11 +159,11 @@ async function bootstrap() {
         return;
       }
       const cleanOrigin = origin.trim().replace(/\/$/, '');
-      if (allowedOrigins.has(cleanOrigin)) {
+      if (isAllowedPattern(cleanOrigin)) {
         callback(null, true);
       } else {
         Logger.warn(`CORS blocked for unauthorized origin: ${origin}`);
-        callback(new Error(`Origin ${origin} not allowed by CORS`), false);
+        callback(new ForbiddenException(`Origin ${origin} not allowed by CORS`), false);
       }
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

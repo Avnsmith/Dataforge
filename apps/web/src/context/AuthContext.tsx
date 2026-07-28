@@ -12,7 +12,6 @@ interface AuthContextType {
   isConnected: boolean;
   isConnecting: boolean;
   isRestoring: boolean;
-  connectMockWallet: () => Promise<void>;
   connectRealWallet: (walletName: any) => Promise<void>;
   disconnectWallet: () => void;
   wallets: readonly any[];
@@ -27,7 +26,26 @@ const logDebug = (...args: any[]) => {
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { connected, isLoading, account, signMessage, connect, disconnect, wallets } = useWallet();
+  const { connected: adapterConnected, isLoading, account: adapterAccount, signMessage: adapterSignMessage, connect, disconnect, wallets, wallet, network, signAndSubmitTransaction } = useWallet();
+
+  // Mock override for testing real login flow execution in headless browser
+  const isMockMode = typeof window !== 'undefined' && window.location.search.includes('mock_wallet=true');
+  const connected = isMockMode ? true : adapterConnected;
+  
+  const account = isMockMode ? {
+    address: { toString: () => "0x73b074ca899d91953f5b76eb636ad67bb4507869e5a151c1154ac6bbdd1f17d4" },
+    publicKey: { toString: () => "0xd7f33218589daa3da44b285bfff7528584d4d9daaf83699ae88db16999d91b45" }
+  } as any : adapterAccount;
+
+  const signMessage = isMockMode ? (async (data: any) => {
+    console.log("Mock signMessage triggered in AuthContext override...");
+    // Call the node exposed cryptographic function to sign using the real private key
+    const sig = await (window as any).signMessageOnChain(data.message);
+    return {
+      signature: sig,
+      fullMessage: data.message
+    };
+  }) as any : adapterSignMessage;
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -66,26 +84,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
     const handleRealWalletLogin = async () => {
-      // Trigger login only if wallet is connected, account is active, and no app user is loaded
-      if (connected && account && !user && !isConnectingState) {
-        setIsConnectingState(true);
-        logDebug("[wallet] connected", Boolean(account?.address));
-        try {
-          const walletAddr = account.address.toString();
-          const publicKeyStr = account.publicKey.toString();
+      console.log("[E2E LOGIN TRACE] Entry Parameters:", {
+        connected,
+        account,
+        wallet,
+        walletName: wallet?.name,
+        network,
+        publicKey: account?.publicKey?.toString(),
+        signMessage,
+        typeofSignMessage: typeof signMessage,
+        signAndSubmitTransaction,
+        typeofSignAndSubmitTransaction: typeof signAndSubmitTransaction,
+        user,
+        isConnectingState
+      });
 
-          logDebug("[auth] nonce requested");
+      if (connected && account && signMessage && !user && !isConnectingState) {
+        setIsConnectingState(true);
+        const walletAddr = account.address.toString();
+        const publicKeyStr = account.publicKey.toString();
+
+        console.log("[E2E LOGIN TRACE] Petra Details:", {
+          connected,
+          accountAddress: walletAddr,
+          publicKey: publicKeyStr,
+          signMessageExists: !!signMessage,
+        });
+
+        try {
           // 2.1 Fetch fresh nonce from backend
           const nonceUrl = apiUrl('/auth/nonce');
+          const noncePayload = JSON.stringify({ walletAddress: walletAddr });
+          const nonceHeaders = { 'Content-Type': 'application/json' };
+          
+          console.log("[E2E LOGIN TRACE] STEP 1: Request Nonce", {
+            url: nonceUrl,
+            method: 'POST',
+            headers: nonceHeaders,
+            body: noncePayload
+          });
+
           const nonceRes = await fetch(nonceUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ walletAddress: walletAddr }),
+            headers: nonceHeaders,
+            body: noncePayload,
           });
+
+          // Read response details
+          const responseHeadersObj: Record<string, string> = {};
+          nonceRes.headers.forEach((value, name) => {
+            responseHeadersObj[name] = value;
+          });
+
+          console.log("[E2E LOGIN TRACE] STEP 1: Response Status", {
+            status: nonceRes.status,
+            ok: nonceRes.ok,
+            headers: responseHeadersObj
+          });
+
           if (!nonceRes.ok) {
-            throw new Error(`Failed to request login nonce: ${nonceRes.statusText}`);
+            const errBody = await nonceRes.text();
+            console.error("[E2E LOGIN TRACE] Nonce Request Failed Body:", errBody);
+            throw new Error(`Failed to request login nonce: Status ${nonceRes.status} | Text: ${nonceRes.statusText} | Body: ${errBody}`);
           }
-          const { nonce } = await nonceRes.json();
+
+          const nonceData = await nonceRes.json();
+          const { nonce } = nonceData;
+          console.log("[E2E LOGIN TRACE] STEP 1: Response Body", nonceData);
 
           if (!active) return;
 
@@ -93,36 +158,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const timestamp = Date.now();
           const messageStr = `DataForge Login\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
           
-          logDebug("[auth] verify started");
-          const signResponse = await signMessage({
-            message: messageStr,
-            nonce: nonce,
-          });
+          console.log("SIGNMESSAGE CHECK")
+          console.log({
+              connected,
+              account,
+              wallet,
+              walletName: wallet?.name,
+              signMessage,
+              typeofSignMessage: typeof signMessage,
+              signAndSubmitTransaction,
+              typeofSubmit: typeof signAndSubmitTransaction,
+          })
+
+          console.log("ENTER signMessage")
+          let signResponse;
+          try {
+            signResponse = await signMessage({
+              message: messageStr,
+              nonce: nonce,
+            });
+          } catch(e: any) {
+            console.error(e);
+            if (e?.stack) console.error(e.stack);
+            if (e?.name) console.error(e.name);
+            if (e?.message) console.error(e.message);
+            if (e?.cause) console.error(e.cause);
+            throw e;
+          }
+          console.log("EXIT signMessage")
+          console.log("Returned signature:", signResponse?.signature?.toString())
 
           if (!active) return;
 
           // 2.3 Verify signature on backend
           const verifyUrl = apiUrl('/auth/verify');
+          const verifyPayload = JSON.stringify({
+            walletAddress: walletAddr,
+            publicKey: publicKeyStr,
+            signature: signResponse.signature.toString(),
+            message: signResponse.fullMessage || messageStr,
+          });
+          const verifyHeaders = { 'Content-Type': 'application/json' };
+
+          console.log("[E2E LOGIN TRACE] STEP 3: POST Login Verify", {
+            url: verifyUrl,
+            method: 'POST',
+            headers: verifyHeaders,
+            body: verifyPayload
+          });
+
           const verifyRes = await fetch(verifyUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              walletAddress: walletAddr,
-              publicKey: publicKeyStr,
-              signature: signResponse.signature.toString(),
-              message: signResponse.fullMessage || messageStr,
-            }),
+            headers: verifyHeaders,
+            body: verifyPayload,
+          });
+
+          const verifyHeadersObj: Record<string, string> = {};
+          verifyRes.headers.forEach((value, name) => {
+            verifyHeadersObj[name] = value;
+          });
+
+          console.log("[E2E LOGIN TRACE] STEP 3: Response Status", {
+            status: verifyRes.status,
+            ok: verifyRes.ok,
+            headers: verifyHeadersObj
           });
 
           if (!verifyRes.ok) {
             const errText = await verifyRes.text();
-            throw new Error(`Signature verification rejected: ${errText}`);
+            console.error("[E2E LOGIN TRACE] Verification Failed Body:", errText);
+            throw new Error(`Signature verification rejected: Status ${verifyRes.status} | Text: ${verifyRes.statusText} | Body: ${errText}`);
           }
 
           if (!active) return;
           const verifyData = await verifyRes.json();
+          console.log("[E2E LOGIN TRACE] STEP 3: Response Body", verifyData);
 
-          logDebug("[auth] session created");
+          console.log("[E2E LOGIN TRACE] STEP 4: Saving session state", {
+            walletAddress: verifyData.user.walletAddress,
+            user: verifyData.user,
+            tokenExists: !!verifyData.token
+          });
+
           // 2.4 Save session state
           setWalletAddress(verifyData.user.walletAddress);
           setUser(verifyData.user);
@@ -131,13 +248,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           sessionStorage.setItem('df_wallet_address', verifyData.user.walletAddress);
           sessionStorage.setItem('df_user', JSON.stringify(verifyData.user));
           sessionStorage.setItem('df_token', verifyData.token);
+
+          console.log("[E2E LOGIN TRACE] STEP 5: Redirecting/Updated React state completed.");
         } catch (err: any) {
-          console.error('Wallet cryptographic login failed:', err);
+          console.error('[E2E LOGIN TRACE] Wallet cryptographic login failed catch block:');
+          console.error(err);
+          if (err?.stack) {
+            console.error(err.stack);
+          }
+          if (err instanceof Response) {
+            try {
+              console.error("HTTP Response content:", await err.text());
+            } catch (_) {}
+          }
           alert(`Cryptographic wallet login failed.\n\nError details:\n${err.message || err}`);
           // Reset wallet connection state on signature failure
           try {
             disconnect();
           } catch (_) {}
+          throw err;
         } finally {
           if (active) {
             setIsConnectingState(false);
@@ -146,55 +275,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+
     handleRealWalletLogin();
 
     return () => {
       active = false;
     };
-  }, [connected, account, user]);
+  }, [connected, account, user, signMessage]);
 
-  const connectMockWallet = async () => {
-    setIsConnectingState(true);
-    try {
-      // Health check first
-      const healthUrl = apiUrl('/health');
-      await fetch(healthUrl);
 
-      // Generate random mock wallet address
-      const hexChars = '0123456789abcdef';
-      let randomHex = '0x';
-      for (let i = 0; i < 64; i++) {
-        randomHex += hexChars[Math.floor(Math.random() * 16)];
-      }
-
-      // Legacy auth endpoint
-      const walletUrl = apiUrl('/auth/wallet');
-      const response = await fetch(walletUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: randomHex }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Mock authentication rejected.');
-      }
-
-      const data = await response.json();
-      setWalletAddress(data.user.walletAddress);
-      setUser(data.user);
-      setToken(data.token);
-
-      // Save to sessionStorage
-      sessionStorage.setItem('df_wallet_address', data.user.walletAddress);
-      sessionStorage.setItem('df_user', JSON.stringify(data.user));
-      sessionStorage.setItem('df_token', data.token);
-    } catch (error: any) {
-      console.error('Mock wallet connection failed:', error);
-      alert(`Could not connect mock wallet.\n\nError details:\n${error.message || error}`);
-    } finally {
-      setIsConnectingState(false);
-    }
-  };
 
   const connectRealWallet = async (walletName: any) => {
     setIsConnectingState(true);
@@ -242,7 +331,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isConnected: !!walletAddress,
         isConnecting,
         isRestoring,
-        connectMockWallet,
         connectRealWallet,
         disconnectWallet,
         wallets: wallets || [],

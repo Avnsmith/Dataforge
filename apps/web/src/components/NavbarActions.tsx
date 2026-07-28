@@ -8,7 +8,7 @@ import { Search, Plus, Wallet, LogOut, X } from 'lucide-react';
 
 export default function NavbarActions() {
   const router = useRouter();
-  const { walletAddress, isConnected, isConnecting, connectMockWallet, connectRealWallet, disconnectWallet, wallets } = useAuth();
+  const { walletAddress, isConnected, isConnecting, connectRealWallet, disconnectWallet, wallets } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
 
@@ -25,11 +25,7 @@ export default function NavbarActions() {
 
   const handleSelectWallet = async (walletName: string) => {
     setShowModal(false);
-    if (walletName === 'mock') {
-      await connectMockWallet();
-    } else {
-      await connectRealWallet(walletName);
-    }
+    await connectRealWallet(walletName);
   };
 
   return (
@@ -119,7 +115,7 @@ export default function NavbarActions() {
               ))}
 
               {/* If no real wallet adapter detected, fallback button for Petra */}
-              {wallets.length === 0 && (
+              {!wallets.some((w: any) => w.name.toLowerCase().includes('petra')) && (
                 <button
                   onClick={() => handleSelectWallet('Petra')}
                   className="flex items-center justify-between w-full h-12 px-4 rounded-lg bg-slate-900 border border-slate-800 text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:border-violet-600/50 transition-all"
@@ -134,19 +130,7 @@ export default function NavbarActions() {
                 </button>
               )}
 
-              {/* Mock Wallet for sandbox/local */}
-              <button
-                onClick={() => handleSelectWallet('mock')}
-                className="flex items-center justify-between w-full h-12 px-4 rounded-lg bg-slate-900 border border-slate-800 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:border-slate-700 transition-all"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-6 w-6 bg-slate-800 rounded flex items-center justify-center text-xs text-slate-400 font-bold">M</div>
-                  <span>Sandbox Mock Wallet</span>
-                </div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/20 px-2 py-0.5 rounded border border-slate-800">
-                  Sandbox
-                </span>
-              </button>
+
             </div>
           </div>
         </div>

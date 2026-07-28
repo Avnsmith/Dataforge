@@ -1,6 +1,7 @@
 {
   "name": "@dataforge/shelby",
   "version": "1.0.0",
+  "description": "Shelby decentralized storage client library for DataForge AI",
   "main": "dist/client.js",
   "types": "dist/client.d.ts",
   "scripts": {

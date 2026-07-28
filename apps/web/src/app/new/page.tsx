@@ -7,7 +7,7 @@ import { Database, Shield, Lock, FileText, HelpCircle, Wallet } from 'lucide-rea
 
 export default function NewDatasetPage() {
  const router = useRouter();
- const { walletAddress, isConnected, isConnecting, isRestoring, connectMockWallet, user, token } = useAuth();
+ const { walletAddress, isConnected, isConnecting, isRestoring, user, token } = useAuth();
 
  const [name, setName] = useState('');
  const [description, setDescription] = useState('');
@@ -94,17 +94,12 @@ export default function NewDatasetPage() {
        <div className="space-y-2">
          <h2 className="text-xl font-bold tracking-tight text-white">Create Dataset Repository</h2>
          <p className="text-sm text-slate-400 leading-relaxed">
-           You must connect your decentralized wallet session to create, version, and sign AI datasets.
+           You must connect your decentralized Petra wallet session to create, version, and sign AI datasets.
+         </p>
+         <p className="text-xs text-slate-500 italic mt-4">
+           Please use the "Connect Wallet" button in the navigation bar.
          </p>
        </div>
-       <button
-         onClick={connectMockWallet}
-         disabled={isConnecting}
-         className="flex items-center justify-center gap-2 w-full h-11 rounded-md btn-gradient text-sm font-semibold text-white transition-all disabled:opacity-50"
-       >
-         <Wallet className="h-4 w-4" />
-         <span>{isConnecting ? 'Connecting...' : 'Connect Mock Wallet'}</span>
-       </button>
      </div>
    );
  }

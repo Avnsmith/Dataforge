@@ -22,11 +22,24 @@ export class AuthController {
     @Body() body: RequestNonceDto,
     @Req() req: Request,
   ) {
-    const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
-    const userAgent = req.headers['user-agent'] || 'unknown';
-    
-    const nonce = await this.authService.generateNonce(body.walletAddress, ip, userAgent);
-    return { nonce };
+    console.log("[BACKEND TRACE] getNonce Controller Entered");
+    console.log("Input body.walletAddress:", body.walletAddress);
+    try {
+      const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      console.log("IP:", ip, "UserAgent:", userAgent);
+      
+      const nonce = await this.authService.generateNonce(body.walletAddress, ip, userAgent);
+      console.log("Generated nonce from service:", nonce);
+      return { nonce };
+    } catch (err: any) {
+      console.error("[BACKEND TRACE] Exception in getNonce Controller:");
+      console.error("err.name:", err.name);
+      console.error("err.message:", err.message);
+      console.error("err.stack:", err.stack);
+      console.error("err.cause:", err.cause);
+      throw err;
+    }
   }
 
   // Cryptographic verification endpoint
@@ -46,32 +59,6 @@ export class AuthController {
     return { user, token };
   }
 
-  // Legacy/mock wallet endpoint — kept for backward compatibility and fallback
-  @Post('wallet')
-  @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
-  async authWallet(
-    @Body() body: { walletAddress: string; publicKey?: string; signature?: string; message?: string },
-  ) {
-    const authMode = this.configService.get<string>('AUTH_MODE') || 'mock';
-    let authResult: { user: any; token: string };
-
-    if (authMode === 'wallet') {
-      if (!body.signature || !body.publicKey || !body.message) {
-        throw new BadRequestException('AUTH_MODE=wallet requires publicKey, signature, and message.');
-      }
-      authResult = await this.authService.loginWithWalletSignature(
-        body.walletAddress,
-        body.publicKey,
-        body.signature,
-        body.message
-      );
-    } else {
-      authResult = await this.authService.loginWithWalletMock(body.walletAddress);
-    }
-
-    return authResult;
-  }
 
   @Get('me')
   async getMe(@Headers('x-wallet-address') walletAddress?: string) {

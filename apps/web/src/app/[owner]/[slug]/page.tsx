@@ -87,7 +87,7 @@ export default function DatasetDetailPage() {
  const queryVersion = searchParams.get('v');
  const queryClient = useQueryClient();
  const { walletAddress, isConnected, user, token, isRestoring } = useAuth();
- const { signAndSubmitTransaction, connected } = useWallet();
+ const { signAndSubmitTransaction, connected, wallet, account, network } = useWallet();
 
  const [activeTab, setActiveTab] = useState<'files' | 'versions' | 'upload' | 'settings'>('files');
  const [selectedVersionId, setSelectedVersionId] = useState<string>('');
@@ -246,8 +246,18 @@ export default function DatasetDetailPage() {
         const prepData = await prepRes.json();
 
         // 2. sign transaction on-chain
+        console.log("UPLOAD_BRANCH_TRACE:", {
+          connected,
+          signAndSubmitTransactionExists: !!signAndSubmitTransaction,
+          walletName: wallet?.name || 'none',
+          accountAddress: account?.address?.toString() || walletAddress || 'none',
+          network: network?.name || 'none',
+          timestamp: Date.now()
+        });
+
         let txHash = '';
         if (connected && signAndSubmitTransaction) {
+          console.log("EXEC_BRANCH: REAL_TRANSACTION_BRANCH");
           try {
             const convertedArgs = [...prepData.payload.arguments];
             if (typeof convertedArgs[2] === 'string' && convertedArgs[2].startsWith('0x')) {
@@ -266,8 +276,7 @@ export default function DatasetDetailPage() {
             throw new Error(`Transaction signing cancelled/failed: ${signErr.message || signErr}`);
           }
         } else {
-          // Fallback to mock transaction hash in local sandbox
-          txHash = 'mock_tx_hash_' + Math.random().toString(36).substring(2);
+          throw new Error("Wallet not connected to Aptos provider. Please connect your Aptos wallet (e.g. Petra) to sign this transaction.");
         }
 
         // 3. Confirm/finalize stage
@@ -339,7 +348,7 @@ export default function DatasetDetailPage() {
           throw new Error(`Transaction signing cancelled/failed: ${signErr.message || signErr}`);
         }
       } else {
-        txHash = 'mock_publish_tx_hash_' + Math.random().toString(36).substring(2);
+        throw new Error("Wallet not connected to Aptos provider. Please connect your Aptos wallet (e.g. Petra) to sign this transaction.");
       }
 
       // 2. Finalize publish

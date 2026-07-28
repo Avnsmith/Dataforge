@@ -88,25 +88,7 @@ describe('AuthService', () => {
     jwtService = module.get<JwtService>(JwtService);
   });
 
-  it('should validate and register a mock Aptos wallet address (Mock Mode fallback)', async () => {
-    const walletAddress = '0x1111111111111111111111111111111111111111111111111111111111111111';
-    
-    const result = await service.loginWithWalletMock(walletAddress);
-    
-    expect(prisma.user.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        walletAddress: walletAddress.toLowerCase(),
-      }),
-    });
-    
-    expect(result).toEqual({
-      token: 'mock-bearer-token-xyz',
-      user: expect.objectContaining({
-        id: 'mock-user-uuid',
-        walletAddress: walletAddress,
-      }),
-    });
-  });
+
 
   describe('verifySignature and nonces', () => {
     const walletAddress = '0x1111111111111111111111111111111111111111111111111111111111111111';

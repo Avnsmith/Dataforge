@@ -38,54 +38,79 @@ export class AuthService {
    * Stores it in Redis (preferred) or PostgreSQL (fallback).
    */
   async generateNonce(walletAddress: string, ip = '127.0.0.1', userAgent = 'unknown'): Promise<string> {
-    if (!walletAddress) {
-      throw new BadRequestException('Wallet address is required');
-    }
-
-    const hexRegex = /^0x[a-fA-F0-9]{64}$/;
-    if (!hexRegex.test(walletAddress)) {
-      throw new BadRequestException('Invalid wallet address format. Must be 0x followed by exactly 64 hex characters (Aptos format).');
-    }
-
-    const normalizedAddress = walletAddress.toLowerCase();
-    const nonce = crypto.randomBytes(16).toString('hex');
-    const createdAt = new Date();
-    const expiresAt = new Date(createdAt.getTime() + 5 * 60 * 1000); // 5 mins
-
-    const nonceObj = {
-      walletAddress: normalizedAddress,
-      nonce,
-      createdAt: createdAt.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      ip,
-      userAgent,
-      used: false,
-    };
-
-    let redisSuccess = false;
-    if (this.redis) {
-      try {
-        const key = `auth:nonce:${normalizedAddress}`;
-        await this.redis.set(key, JSON.stringify(nonceObj), 'EX', 300); // 5 mins
-        redisSuccess = true;
-      } catch (e: any) {
-        this.logger.warn(`Redis set failed: ${e.message}. Falling back to Postgres.`);
+    console.log("[BACKEND TRACE] generateNonce Service Entered");
+    console.log("walletAddress:", walletAddress);
+    try {
+      if (!walletAddress) {
+        console.log("Validation: walletAddress missing");
+        throw new BadRequestException('Wallet address is required');
       }
-    }
 
-    if (!redisSuccess) {
-      await prisma.authNonce.create({
-        data: {
-          walletAddress: normalizedAddress,
-          nonce,
-          expiresAt,
-          ip,
-          userAgent,
-        },
-      });
-    }
+      const hexRegex = /^0x[a-fA-F0-9]{64}$/;
+      const validationResult = hexRegex.test(walletAddress);
+      console.log("validation result for raw address:", validationResult);
 
-    return nonce;
+      if (!validationResult) {
+        console.log("Validation Failed: invalid wallet address format");
+        throw new BadRequestException('Invalid wallet address format. Must be 0x followed by exactly 64 hex characters (Aptos format).');
+      }
+
+      const normalizedAddress = walletAddress.toLowerCase();
+      console.log("normalizedAddress:", normalizedAddress);
+
+      const nonce = crypto.randomBytes(16).toString('hex');
+      console.log("generated nonce:", nonce);
+
+      const createdAt = new Date();
+      const expiresAt = new Date(createdAt.getTime() + 5 * 60 * 1000); // 5 mins
+
+      const nonceObj = {
+        walletAddress: normalizedAddress,
+        nonce,
+        createdAt: createdAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        ip,
+        userAgent,
+        used: false,
+      };
+
+      let redisSuccess = false;
+      console.log("redis status (exists):", !!this.redis);
+      if (this.redis) {
+        try {
+          const key = `auth:nonce:${normalizedAddress}`;
+          console.log("Setting nonce in Redis key:", key);
+          await this.redis.set(key, JSON.stringify(nonceObj), 'EX', 300); // 5 mins
+          console.log("Redis status: set successful");
+          redisSuccess = true;
+        } catch (e: any) {
+          console.warn(`Redis set failed: ${e.message}. Falling back to Postgres.`);
+        }
+      }
+
+      if (!redisSuccess) {
+        console.log("database status: inserting nonce into Postgres AuthNonce table...");
+        const dbResult = await prisma.authNonce.create({
+          data: {
+            walletAddress: normalizedAddress,
+            nonce,
+            expiresAt,
+            ip,
+            userAgent,
+          },
+        });
+        console.log("database status: insert successful, row id:", dbResult.id || '(no id)');
+      }
+
+      return nonce;
+    } catch (err: any) {
+      console.error("[BACKEND TRACE] Exception in generateNonce Service:");
+      console.error("err.name:", err.name);
+      console.error("err.message:", err.message);
+      console.error("err.stack:", err.stack);
+      console.error("err.cause:", err.cause);
+      throw err;
+    }
   }
 
   /**
@@ -250,57 +275,7 @@ export class AuthService {
     return { user, token };
   }
 
-  /**
-   * Validates the wallet address (mock auth) and returns/creates the User, plus a JWT token.
-   * Keeps backward compatibility for mock AUTH_MODE.
-   */
-  async loginWithWalletMock(walletAddress: string): Promise<{ user: User; token: string }> {
-    if (!walletAddress) {
-      throw new BadRequestException('Wallet address is required');
-    }
 
-    const hexRegex = /^0x[a-fA-F0-9]{64}$/;
-    if (!hexRegex.test(walletAddress)) {
-      throw new BadRequestException('Invalid wallet address format. Must be 0x followed by exactly 64 hex characters (Aptos format).');
-    }
-
-    const normalizedAddress = walletAddress.toLowerCase();
-
-    let user = await prisma.user.findUnique({
-      where: { walletAddress: normalizedAddress },
-    });
-
-    if (!user) {
-      const shortAddress = normalizedAddress.substring(2, 8);
-      let username = `user_${shortAddress}`;
-
-      const existingUserByUsername = await prisma.user.findUnique({
-        where: { username },
-      });
-      if (existingUserByUsername) {
-        username = `user_${shortAddress}_${Math.floor(Math.random() * 10000)}`;
-      }
-
-      const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${normalizedAddress}`;
-
-      user = await prisma.user.create({
-        data: {
-          walletAddress: normalizedAddress,
-          username,
-          avatarUrl,
-        },
-      });
-    }
-
-    const token = this.jwtService.sign({
-      sub: user.id,
-      walletAddress: user.walletAddress,
-    }, {
-      jwtid: crypto.randomUUID(),
-    });
-
-    return { user, token };
-  }
 
   async verifyToken(token: string): Promise<any> {
     try {

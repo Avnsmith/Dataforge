@@ -1,6 +1,7 @@
 {
   "name": "@dataforge/ai",
   "version": "1.0.0",
+  "description": "AI/ML vector search and metadata extraction utilities for DataForge AI",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

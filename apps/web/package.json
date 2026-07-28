@@ -1,6 +1,7 @@
 {
   "name": "web",
   "version": "1.0.0",
+  "description": "Next.js frontend dashboard application for DataForge AI",
   "private": true,
   "scripts": {
     "dev": "next dev --port=3000",
