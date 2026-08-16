@@ -37,17 +37,16 @@ echo ""
 RESP=$(curl -s -o /tmp/prod_smoke_body.txt -w "%{http_code}" "$API/health")
 check "1. GET /health" "200" "$RESP" "$(cat /tmp/prod_smoke_body.txt)"
 
-# 2. Auth — valid wallet
-RESP=$(curl -s -o /tmp/prod_smoke_auth.txt -w "%{http_code}" -X POST \
-  -H "Content-Type: application/json" \
-  -d "{\"walletAddress\":\"$WALLET\"}" \
-  "$API/auth/wallet")
-check "2. POST /auth/wallet (valid)" "200" "$RESP" "$(cat /tmp/prod_smoke_auth.txt)"
-
-# Extract token
-TOKEN=$(cat /tmp/prod_smoke_auth.txt | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null || echo "")
-if [ -z "$TOKEN" ]; then
-  echo "❌ Failed to extract token from login response"
+# 2. Auth — cryptographic nonce challenge handshake
+echo "Running cryptographic login..."
+TOKEN=$(node "$(dirname "$0")/smoke-login.js" "$API" 2>/tmp/prod_smoke_login_err.txt)
+if [ -n "$TOKEN" ]; then
+  echo "  ✅ PASS: 2. Cryptographic Auth login successful"
+  PASS=$((PASS + 1))
+else
+  echo "  ❌ FAIL: 2. Cryptographic Auth login failed"
+  cat /tmp/prod_smoke_login_err.txt
+  FAIL=$((FAIL + 1))
   exit 1
 fi
 
