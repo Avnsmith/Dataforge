@@ -39,7 +39,11 @@ check "1. GET /health" "200" "$RESP" "$(cat /tmp/prod_smoke_body.txt)"
 
 # 2. Auth — cryptographic nonce challenge handshake
 echo "Running cryptographic login..."
-TOKEN=$(node "$(dirname "$0")/smoke-login.js" "$API" 2>/tmp/prod_smoke_login_err.txt)
+if command -v node >/dev/null 2>&1; then
+  TOKEN=$(node "$(dirname "$0")/smoke-login.js" "$API" 2>/tmp/prod_smoke_login_err.txt)
+else
+  TOKEN=$(docker exec -i dataforge_api node -e "$(cat "$(dirname "$0")/smoke-login.js")" "http://localhost:4000/api" 2>/tmp/prod_smoke_login_err.txt)
+fi
 if [ -n "$TOKEN" ]; then
   echo "  ✅ PASS: 2. Cryptographic Auth login successful"
   PASS=$((PASS + 1))
