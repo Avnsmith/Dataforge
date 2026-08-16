@@ -42,7 +42,7 @@ DataForge AI solves these problems by creating a **decentralized, cryptographica
 
 * **Dataset Registry**: Public and private repository hosting for ML-ready datasets.
 * **Semantic Versioning**: Freeze and publish datasets under explicit semver tags (e.g. `1.0.0`).
-* **Cryptographic Provenance**: File registrations are recorded on the **Aptos Testnet** ledger.
+* **Cryptographic Provenance**: File registrations are recorded on the **Shelbynet** ledger.
 * **Decentralized Storage**: Integrates with the **Shelby Storage** network to host raw dataset blocks.
 * **Wallet-Based Authentication**: Nonce-challenge cryptographic login utilizing Aptos wallet extensions (Petra Wallet).
 * **Merkle Root Commitments**: Uses on-chain Merkle Root commitments to guarantee block-level data integrity.
@@ -54,12 +54,12 @@ DataForge AI solves these problems by creating a **decentralized, cryptographica
 
 ## Architecture
 
-DataForge AI is split into a Next.js web application, a NestJS orchestration API, background ingestion workers, PostgreSQL metadata storage, and Shelby decentralized storage verified on the Aptos Testnet.
+DataForge AI is split into a Next.js web application, a NestJS orchestration API, background ingestion workers, PostgreSQL metadata storage, and Shelby decentralized storage verified on Shelbynet.
 
 ```mermaid
 graph TD
     User([User / Developer]) -->|Interact / Sign| Frontend[Next.js Frontend]
-    User -->|Sign register_blob| Aptos[Aptos Testnet]
+    User -->|Sign register_blob| Aptos[Shelbynet]
     Frontend -->|REST / JWT| API[NestJS API Server]
     
     subgraph "Backend Infrastructure"
@@ -110,7 +110,7 @@ For package setup metadata, see the individual packages.
 
 ### Active Logged-In Home Page
 ![Home Page Logged In](docs/assets/home_logged_in.png)
-*Browse and manage verified dataset repositories (e.g. test-vps-1b7oz1, crypto-x-research-dataset) once connected to Aptos Testnet.*
+*Browse and manage verified dataset repositories (e.g. test-vps-1b7oz1, crypto-x-research-dataset) once connected to Shelbynet.*
 
 ### Alternative Light Mode Interface
 ![Landing Light Mode Layout](docs/assets/landing_light_mode.png)
@@ -133,7 +133,7 @@ Define the database connection, Redis URLs, JWT secrets, and Shelby network cred
 * `DATABASE_URL`: PostgreSQL connection string.
 * `REDIS_URL`: Redis server URL.
 * `SHELBY_MODE`: `mock` (local filesystem) or `live` (on-chain Shelby network gateway).
-* `SHELBY_NETWORK`: `'testnet'` (Aptos Testnet).
+* `SHELBY_NETWORK`: `'shelbynet'` (Chain ID 114).
 * `SHELBY_PRIVATE_KEY`: Your Aptos wallet private key.
 * `SHELBY_ACCOUNT`: Your Aptos wallet account address.
 
@@ -178,7 +178,7 @@ Comprehensive documentation of the DataForge AI architecture and flows is availa
 
 ## Roadmap
 
-* [x] **Implemented**: Nonce-challenge wallet handshake, Aptos Testnet verification, Shelby Storage mock/live engines, semantic versions, and lineage tracking.
+* [x] **Implemented**: Nonce-challenge wallet handshake, Shelbynet verification, Shelby Storage mock/live engines, semantic versions, and lineage tracking.
 * [ ] **In Progress**: Vector similarity dataset searches, wallet connection persistence, and CLI integration tools.
 * [ ] **Future**: Multi-chain registry verification (Sui, Ethereum), direct Jupyter Notebook Python SDK loaders.
 

@@ -25,7 +25,7 @@ export class VersionsService {
       network: this.configService.get<string>('SHELBY_NETWORK') || 'shelbynet',
       account: this.configService.get<string>('SHELBY_ACCOUNT') || '',
       privateKey: this.configService.get<string>('SHELBY_PRIVATE_KEY') || '',
-      rpcUrl: this.configService.get<string>('SHELBY_RPC_URL') || '',
+      rpcUrl: this.configService.get<string>('SHELBY_RPC_URL') || 'https://api.shelbynet.shelby.xyz/v1',
       explorerBaseUrl: this.configService.get<string>('SHELBY_EXPLORER_BASE_URL') || 'https://explorer.shelby.xyz/shelbynet',
       apiKey: this.configService.get<string>('SHELBY_API_KEY') || undefined,
       storageDir: this.configService.get<string>('SHELBY_STORAGE_DIR') || undefined,
@@ -544,7 +544,8 @@ export class VersionsService {
       const { Aptos, AptosConfig, Network } = require('@aptos-labs/ts-sdk');
       
       const aptosConfig = new AptosConfig({
-        network: Network.TESTNET
+        network: Network.CUSTOM,
+        fullnode: 'https://api.shelbynet.shelby.xyz/v1'
       });
       const aptos = new Aptos(aptosConfig);
 

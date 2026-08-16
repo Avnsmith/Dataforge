@@ -11,7 +11,7 @@ The following diagram illustrates the relationship between components:
 ```mermaid
 graph TD
     User([User / DApp Client]) -->|Web UI / Wallet| Frontend[Next.js Frontend]
-    User -->|Petra Wallet Sign| AptosChain[Aptos Testnet]
+    User -->|Petra Wallet Sign| AptosChain[Shelbynet]
     Frontend -->|REST APIs / JWT| Backend[NestJS API Server]
     
     subgraph "Production Backend Infrastructure"
@@ -42,7 +42,7 @@ The project structure is organized as a Yarn/NPM workspace monorepo:
 * **`apps/api` (NestJS Backend)**:
   * Orchestrates user authentication, dataset registration, and version states.
   * Formulates transaction payloads for on-chain registry contracts.
-  * Validates transaction hashes on the Aptos Testnet before confirming metadata.
+  * Validates transaction hashes on Shelbynet before confirming metadata.
   * Spawns queue jobs via BullMQ for background ingestion processing.
 
 ### Packages (`packages/`)
@@ -70,4 +70,4 @@ The project structure is organized as a Yarn/NPM workspace monorepo:
 1. **Authentication**: Uses a cryptographic nonce challenge handshake. The backend generates a database-saved nonce, which the client signs using their wallet's private key. The backend verifies the signature using the derived public key to issue a JWT.
 2. **Metadata Ingestion**: The database records ownership, tag categories, and semantic versions. Files are prepared on-chain via entry function calls.
 3. **Queue-Based Ingestion**: Large uploads, metadata parsing, and version compilation are offloaded to background BullMQ workers. This prevents HTTP timeouts and ensures resilient retry behaviors.
-4. **On-Chain Verification**: The backend queries the Aptos Testnet RPC endpoints directly to verify that transactions registered on the frontend match the sender, Merkle root, and expected file size parameters before committing dataset transitions.
+4. **On-Chain Verification**: The backend queries Shelbynet RPC endpoints directly to verify that transactions registered on the frontend match the sender, Merkle root, and expected file size parameters before committing dataset transitions.

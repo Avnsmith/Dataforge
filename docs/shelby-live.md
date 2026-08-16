@@ -13,7 +13,7 @@ To enable real decentralized storage on the Shelby network, configure the follow
 SHELBY_MODE=live
 
 # The target network (e.g. testnet, local, or shelbynet)
-SHELBY_NETWORK=testnet
+SHELBY_NETWORK=shelbynet
 
 # Your Aptos wallet account address
 SHELBY_ACCOUNT=0x147e4d3a5b10eaed2a93536e284c23096dfcea9ac61f0a8420e5d01fbd8f0ea8
@@ -22,13 +22,13 @@ SHELBY_ACCOUNT=0x147e4d3a5b10eaed2a93536e284c23096dfcea9ac61f0a8420e5d01fbd8f0ea
 SHELBY_PRIVATE_KEY=0x1111111111111111111111111111111111111111111111111111111111111111
 
 # The endpoint of your Shelby RPC node
-SHELBY_RPC_URL=https://rpc.shelby.xyz
+SHELBY_RPC_URL=https://api.shelbynet.shelby.xyz/v1
 
 # Optional Shelby API Key (if RPC node requires API key auth)
 SHELBY_API_KEY=your-api-key-here
 
 # Explorer URL format
-SHELBY_EXPLORER_BASE_URL=https://explorer.shelby.xyz/testnet
+SHELBY_EXPLORER_BASE_URL=https://explorer.shelby.xyz/shelbynet
 ```
 
 ---
@@ -51,14 +51,17 @@ Decentralized uploads require two assets:
 1. **APT Tokens:** To pay for Aptos gas fees on-chain.
 2. **shelbyUSD Tokens:** To pay for storage rental slots.
 
-If running on the **testnet**, you can request faucet funding using the SDK's built-in faucet endpoints. We can execute the following snippet in a local Node.js process to bootstrap the account with test tokens:
+If running on **shelbynet**, you can request faucet funding using the SDK's built-in faucet endpoints. We can execute the following snippet in a local Node.js process to bootstrap the account with test tokens:
 
 ```typescript
 import { ShelbyNodeClient } from '@shelby-protocol/sdk/node';
 import { Network } from '@aptos-labs/ts-sdk';
 
 const client = new ShelbyNodeClient({
-  network: Network.TESTNET,
+  network: Network.CUSTOM,
+  rpc: {
+    baseUrl: 'https://api.shelbynet.shelby.xyz/v1',
+  },
 });
 
 const address = '0x147e4d3a5b10eaed2a93536e284c23096dfcea9ac61f0a8420e5d01fbd8f0ea8';

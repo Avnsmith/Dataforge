@@ -6,7 +6,7 @@ This document details the step-by-step lifecycle of creating, uploading, verifyi
 
 ## Complete Lifecycle Workflow
 
-The sequence below traces the interaction between the Client (Browser & Petra Wallet), the NestJS API backend, the PostgreSQL DB, the background BullMQ Worker, the Shelby Storage node, and the Aptos Testnet blockchain.
+The sequence below traces the interaction between the Client (Browser & Petra Wallet), the NestJS API backend, the PostgreSQL DB, the background BullMQ Worker, the Shelby Storage node, and the Shelbynet blockchain.
 
 ```mermaid
 sequenceDiagram
@@ -16,7 +16,7 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Redis as Redis Queue
     participant Worker as BullMQ Worker
-    participant Aptos as Aptos Testnet
+    participant Aptos as Shelbynet
     participant Shelby as Shelby Storage
 
     %% Authentication
@@ -89,9 +89,9 @@ sequenceDiagram
 
 ### 3. Cryptographic File Upload & Verification
 * For each file to be uploaded, the client calls `/files/prepare`. The backend returns the expected storage path, the calculated Merkle Root, and a pre-formulated payload for the Aptos transaction.
-* The client submits this transaction calling the `register_blob` function on the Aptos Testnet.
+* The client submits this transaction calling the `register_blob` function on Shelbynet.
 * The client passes the resulting transaction hash along with the file stream to `/files/upload`.
-* **Important**: The backend queries the Aptos Testnet nodes to confirm that the transaction was successfully finalized, the sender matches the dataset owner, and the Merkle Root/file size parameters match what was prepared. If validated, the file bytes are written to Shelby Storage.
+* **Important**: The backend queries Shelbynet nodes to confirm that the transaction was successfully finalized, the sender matches the dataset owner, and the Merkle Root/file size parameters match what was prepared. If validated, the file bytes are written to Shelby Storage.
 
 ### 4. Manifest Compilation & Version Publication
 * When the user clicks "Publish Version", the backend prepares a `manifest.json` file aggregating all files, hashes, sizes, and lineage metadata.

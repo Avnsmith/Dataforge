@@ -100,6 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (connected && account && signMessage && !user && !isConnectingState) {
+        const isShelbynet = network?.chainId?.toString() === '114' || network?.chainId?.toString() === '118' || network?.name?.toLowerCase() === 'shelbynet';
+        if (!isShelbynet) {
+          console.warn("[E2E LOGIN TRACE] Rejected login: wallet is on wrong network:", network);
+          alert(`Connected wallet is on ${network?.name || 'unknown'} (Chain ID ${network?.chainId || 'unknown'}), but Shelbynet (Chain ID 114) is required. Please switch to Shelbynet to log in.`);
+          return;
+        }
+
         setIsConnectingState(true);
         const walletAddr = account.address.toString();
         const publicKeyStr = account.publicKey.toString();

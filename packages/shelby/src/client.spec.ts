@@ -26,6 +26,7 @@ jest.mock('@aptos-labs/ts-sdk', () => ({
     TESTNET: 'testnet',
     LOCAL: 'local',
     SHELBYNET: 'shelbynet',
+    CUSTOM: 'custom',
   },
 }));
 
@@ -160,7 +161,7 @@ describe('ShelbyLiveProvider Configuration & Fallback', () => {
   it('should fail loudly when private key is invalid', () => {
     const invalidConfig: ShelbyConfig = {
       mode: 'live',
-      network: 'testnet',
+      network: 'shelbynet',
       account: '0x123',
       privateKey: 'invalid-hex-key',
       rpcUrl: 'http://localhost:8080',

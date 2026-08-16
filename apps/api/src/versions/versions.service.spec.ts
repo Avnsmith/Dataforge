@@ -38,6 +38,7 @@ jest.mock('@aptos-labs/ts-sdk', () => ({
     TESTNET: 'testnet',
     LOCAL: 'local',
     SHELBYNET: 'shelbynet',
+    CUSTOM: 'custom',
   },
 }));
 

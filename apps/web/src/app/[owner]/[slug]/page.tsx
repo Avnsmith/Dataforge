@@ -255,6 +255,11 @@ export default function DatasetDetailPage() {
           timestamp: Date.now()
         });
 
+        const isShelbynet = network?.chainId?.toString() === '114' || network?.chainId?.toString() === '118' || network?.name?.toLowerCase() === 'shelbynet';
+        if (!isShelbynet) {
+          throw new Error(`Connected wallet is on ${network?.name || 'unknown'} (Chain ID ${network?.chainId || 'unknown'}), but Shelbynet (Chain ID 114) is required. Please switch to Shelbynet in your wallet extension.`);
+        }
+
         let txHash = '';
         if (connected && signAndSubmitTransaction) {
           console.log("EXEC_BRANCH: REAL_TRANSACTION_BRANCH");
@@ -327,6 +332,11 @@ export default function DatasetDetailPage() {
       }
 
       const prepData = await prepRes.json();
+
+      const isShelbynet = network?.chainId?.toString() === '114' || network?.chainId?.toString() === '118' || network?.name?.toLowerCase() === 'shelbynet';
+      if (!isShelbynet) {
+        throw new Error(`Connected wallet is on ${network?.name || 'unknown'} (Chain ID ${network?.chainId || 'unknown'}), but Shelbynet (Chain ID 114) is required. Please switch to Shelbynet in your wallet extension.`);
+      }
 
       let txHash = '';
       if (connected && signAndSubmitTransaction) {

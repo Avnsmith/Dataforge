@@ -61,8 +61,8 @@ Set these in the Railway dashboard under **api → Variables → production**.
 | `FRONTEND_ORIGIN` | Vercel production URL (for CORS validation) |
 | `ADDITIONAL_FRONTEND_ORIGINS` | Comma-separated Vercel preview/mock URLs |
 | `SHELBY_MODE` | `mock` (or `live` when real credentials available) |
-| `SHELBY_NETWORK` | `testnet` |
-| `SHELBY_EXPLORER_BASE_URL` | `https://explorer.shelby.xyz/testnet` |
+| `SHELBY_NETWORK` | `shelbynet` |
+| `SHELBY_EXPLORER_BASE_URL` | `https://explorer.shelby.xyz/shelbynet` |
 | `SHELBY_STORAGE_DIR` | `/app/storage` (Railway persistent volume) |
 | `MAX_UPLOAD_FILE_SIZE_MB` | `25` |
 | `EMBEDDING_MODE` | `mock` |

@@ -55,7 +55,7 @@ services:
       SHELBY_NETWORK: ${SHELBY_NETWORK:-shelbynet}
       SHELBY_ACCOUNT: ${SHELBY_ACCOUNT:-}
       SHELBY_PRIVATE_KEY: ${SHELBY_PRIVATE_KEY:-}
-      SHELBY_RPC_URL: ${SHELBY_RPC_URL:-https://rpc.shelby.xyz}
+      SHELBY_RPC_URL: ${SHELBY_RPC_URL:-https://api.shelbynet.shelby.xyz/v1}
       SHELBY_EXPLORER_BASE_URL: ${SHELBY_EXPLORER_BASE_URL:-https://explorer.shelby.xyz/shelbynet}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
       MAX_UPLOAD_FILE_SIZE_MB: ${MAX_UPLOAD_FILE_SIZE_MB:-25}

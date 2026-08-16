@@ -13,7 +13,7 @@ DataForge AI is developed systematically. Below is the current outline of implem
 
 ### Cryptographic Provenance & Security
 * **Aptos Wallet Handshake**: Nonce-challenge cryptographic login verifying public key signatures.
-* **On-Chain Registry**: Verification of transactions calling `register_blob` with Merkle Root commitments on the **Aptos Testnet**.
+* **On-Chain Registry**: Verification of transactions calling `register_blob` with Merkle Root commitments on **Shelbynet**.
 * **Integrity Proofs**: Verification of sender, file size, and chunk parameters directly via Aptos fullnodes.
 
 ### Decentralized Storage

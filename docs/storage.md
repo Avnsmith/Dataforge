@@ -20,7 +20,7 @@ To keep network costs low and maximize efficiency, DataForge splits data into tw
 
 | Layer | Type | Description | Location |
 |---|---|---|---|
-| **Cryptographic Provenance** | On-Chain | Registration of blob metadata, including paths, sizes, expirations, and Merkle Roots. | Aptos Testnet Ledger |
+| **Cryptographic Provenance** | On-Chain | Registration of blob metadata, including paths, sizes, expirations, and Merkle Roots. | Shelbynet Ledger |
 | **Raw Dataset Storage** | Off-Chain | Actual raw data bytes (CSVs, images, JSONs) and aggregated dataset version manifests. | Shelby Storage Nodes |
 | **Dataset Metadata** | Off-Chain | User profiles, dataset repository tags, lineage links, and status logs. | PostgreSQL Database |
 
@@ -42,7 +42,7 @@ During the file upload process, the backend calculates the SHA256 checksum of th
 
 ## On-Chain Registry Contract
 
-All dataset file registrations are recorded on the Aptos Testnet under the official Shelby registry contract module:
+All dataset file registrations are recorded on Shelbynet under the official Shelby registry contract module:
 
 * **Registry Module**: `0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a::blob_metadata`
 * **Entry Function**: `register_blob`

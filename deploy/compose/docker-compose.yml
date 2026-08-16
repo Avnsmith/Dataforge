@@ -78,7 +78,7 @@ services:
       SHELBY_NETWORK: ${SHELBY_NETWORK:-shelbynet}
       SHELBY_ACCOUNT: ${SHELBY_ACCOUNT:-}
       SHELBY_PRIVATE_KEY: ${SHELBY_PRIVATE_KEY:-}
-      SHELBY_RPC_URL: ${SHELBY_RPC_URL:-https://api.shelbynet.shelby.xyz/shelby}
+      SHELBY_RPC_URL: ${SHELBY_RPC_URL:-https://api.shelbynet.shelby.xyz/v1}
       SHELBY_EXPLORER_BASE_URL: ${SHELBY_EXPLORER_BASE_URL:-https://explorer.shelby.xyz/shelbynet}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-https://web-gamma-green-wd3aonhbdz.vercel.app}
       MAX_UPLOAD_FILE_SIZE_MB: ${MAX_UPLOAD_FILE_SIZE_MB:-25}
@@ -131,7 +131,7 @@ services:
       SHELBY_NETWORK: ${SHELBY_NETWORK:-shelbynet}
       SHELBY_ACCOUNT: ${SHELBY_ACCOUNT:-}
       SHELBY_PRIVATE_KEY: ${SHELBY_PRIVATE_KEY:-}
-      SHELBY_RPC_URL: ${SHELBY_RPC_URL:-https://api.shelbynet.shelby.xyz/shelby}
+      SHELBY_RPC_URL: ${SHELBY_RPC_URL:-https://api.shelbynet.shelby.xyz/v1}
       SHELBY_EXPLORER_BASE_URL: ${SHELBY_EXPLORER_BASE_URL:-https://explorer.shelby.xyz/shelbynet}
       MAX_UPLOAD_FILE_SIZE_MB: ${MAX_UPLOAD_FILE_SIZE_MB:-25}
       EMBEDDING_MODE: ${EMBEDDING_MODE:-mock}
