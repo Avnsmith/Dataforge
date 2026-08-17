@@ -89,7 +89,7 @@ export class ShelbyLiveProvider implements ShelbyProvider {
     if (!this.sdkClient) {
       try {
         const { ShelbyNodeClient } = await importSdkNode();
-        this.sdkClient = new ShelbyNodeClient({
+        const clientInstance = new ShelbyNodeClient({
           network: this.config.network as any,
           apiKey: this.config.apiKey,
           rpc: {
@@ -97,6 +97,85 @@ export class ShelbyLiveProvider implements ShelbyProvider {
             apiKey: this.config.apiKey,
           },
         });
+
+        // Intercept/monkey-patch coordination getBlobMetadata call to support Shelbynet v1 metadata structure
+        if (clientInstance.coordination && typeof clientInstance.coordination.getBlobMetadata === 'function') {
+          const originalGet = clientInstance.coordination.getBlobMetadata.bind(clientInstance.coordination);
+          clientInstance.coordination.getBlobMetadata = async (params: any) => {
+            if (this.config.network === 'shelbynet') {
+              try {
+                const { Aptos, AptosConfig, Network } = require('@aptos-labs/ts-sdk');
+                const aptosConfig = new AptosConfig({
+                  network: Network.CUSTOM,
+                  fullnode: 'https://api.shelbynet.shelby.xyz/v1'
+                });
+                const aptos = new Aptos(aptosConfig);
+                
+                const normalizedOwner = params.account.startsWith('0x') ? params.account : `0x${params.account}`;
+                const ownerLongWithoutPrefix = normalizedOwner.toLowerCase().replace(/^0x/i, '').padStart(64, '0');
+                const blobKey = `@${ownerLongWithoutPrefix}/${params.name}`;
+                
+                const rawViewRes = await aptos.view({
+                  payload: {
+                    function: '0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a::blob_metadata::get_full_object_metadata',
+                    functionArguments: [blobKey]
+                  }
+                });
+                
+                if (!rawViewRes?.[0]?.vec?.[0]) {
+                  return undefined;
+                }
+                
+                const fullObject = rawViewRes[0].vec[0];
+                let blobMetadata = fullObject.blob_metadata?.vec?.[0] || fullObject.blob_metadata;
+                if (!blobMetadata) return undefined;
+                if (blobMetadata.vec && Array.isArray(blobMetadata.vec)) {
+                  blobMetadata = blobMetadata.vec[0];
+                }
+                if (!blobMetadata) return undefined;
+
+                let content = blobMetadata.content?.vec?.[0] || blobMetadata.content;
+                if (content && content.vec && Array.isArray(content.vec)) {
+                  content = content.vec[0];
+                }
+                
+                let encoding = content?.encoding?.vec?.[0] || content?.encoding;
+                if (encoding && encoding.vec && Array.isArray(encoding.vec)) {
+                  encoding = encoding.vec[0];
+                }
+
+                const sizeVal = content?.blob_size || 0;
+                const rawCommitment = content?.blob_commitment;
+                
+                let blobMerkleRoot: Uint8Array | undefined;
+                if (rawCommitment) {
+                  const commitmentHex = typeof rawCommitment === 'string' 
+                    ? rawCommitment 
+                    : Buffer.from(rawCommitment).toString('hex');
+                  const hexParts = commitmentHex.replace(/^0x/i, '').match(/.{1,2}/g) || [];
+                  blobMerkleRoot = new Uint8Array(
+                    hexParts.map((b: string) => parseInt(b, 16))
+                  );
+                }
+
+                return {
+                  blobMerkleRoot,
+                  owner: blobMetadata.owner,
+                  creationMicros: Number(blobMetadata.creation_micros || 0),
+                  expirationMicros: Number(blobMetadata.expiration_micros || 0),
+                  size: Number(sizeVal),
+                  encoding
+                };
+              } catch (err: any) {
+                return originalGet(params);
+              }
+            } else {
+              return originalGet(params);
+            }
+          };
+        }
+
+        this.sdkClient = clientInstance;
       } catch (e: any) {
         this.recordFailure();
         throw new Error(`Shelby Client initialization failed: ${e.message}`);
