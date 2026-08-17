@@ -613,7 +613,12 @@ export class VersionsService {
 
       // Normalize Merkle Root comparison if expected is not empty
       if (expectedMerkleRoot) {
-        const onChainMerkle = args[2].replace(/^0x/i, '').toLowerCase();
+        const rawMerkle = args.length === 10 ? args[4] : args[2];
+        if (!rawMerkle || typeof rawMerkle !== 'string') {
+          this.logger.warn(`Merkle root is missing or invalid in transaction arguments for txHash=${txHash}`);
+          return false;
+        }
+        const onChainMerkle = rawMerkle.replace(/^0x/i, '').toLowerCase();
         const cleanExpectedMerkle = expectedMerkleRoot.replace(/^0x/i, '').toLowerCase();
         if (onChainMerkle !== cleanExpectedMerkle) {
           this.logger.warn(`Merkle root mismatch for txHash=${txHash}: expected=${cleanExpectedMerkle}, actual=${onChainMerkle}`);
@@ -623,7 +628,12 @@ export class VersionsService {
 
       // Compare size if expected is not 0
       if (expectedSize > 0n) {
-        const onChainSize = BigInt(args[4]);
+        const rawSize = args.length === 10 ? args[6] : args[4];
+        if (rawSize === undefined || rawSize === null) {
+          this.logger.warn(`Size is missing in transaction arguments for txHash=${txHash}`);
+          return false;
+        }
+        const onChainSize = BigInt(rawSize);
         if (onChainSize !== expectedSize) {
           this.logger.warn(`Size mismatch for txHash=${txHash}: expected=${expectedSize}, actual=${onChainSize}`);
           return false;
@@ -739,11 +749,21 @@ export class VersionsService {
     }
     fs.writeFileSync(tempFileFullPath, fileBuffer);
 
-    // 3. Construct Move transaction payload
     const payload = {
       function: '0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a::blob_metadata::register_blob',
       type_arguments: [],
-      arguments: [
+      arguments: mode === 'live' ? [
+        blobName,
+        null, // description Option<String> None
+        null, // content-type Option<String> None
+        expirationMicros.toString(),
+        merkleRoot.startsWith('0x') ? merkleRoot : `0x${merkleRoot}`,
+        numChunksets,
+        size.toString(),
+        0, // u8
+        0, // u8
+        0  // u8
+      ] : [
         blobName,
         expirationMicros.toString(),
         merkleRoot.startsWith('0x') ? merkleRoot : `0x${merkleRoot}`,
@@ -976,7 +996,18 @@ export class VersionsService {
     const payload = {
       function: '0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a::blob_metadata::register_blob',
       type_arguments: [],
-      arguments: [
+      arguments: mode === 'live' ? [
+        blobName,
+        null, // description Option<String> None
+        null, // content-type Option<String> None
+        expirationMicros.toString(),
+        merkleRoot.startsWith('0x') ? merkleRoot : `0x${merkleRoot}`,
+        numChunksets,
+        size.toString(),
+        0, // u8
+        0, // u8
+        0  // u8
+      ] : [
         blobName,
         expirationMicros.toString(),
         merkleRoot.startsWith('0x') ? merkleRoot : `0x${merkleRoot}`,

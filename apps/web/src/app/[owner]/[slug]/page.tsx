@@ -265,8 +265,9 @@ export default function DatasetDetailPage() {
           console.log("EXEC_BRANCH: REAL_TRANSACTION_BRANCH");
           try {
             const convertedArgs = [...prepData.payload.arguments];
-            if (typeof convertedArgs[2] === 'string' && convertedArgs[2].startsWith('0x')) {
-              convertedArgs[2] = hexToUint8Array(convertedArgs[2]);
+            const merkleIdx = convertedArgs.length === 10 ? 4 : 2;
+            if (typeof convertedArgs[merkleIdx] === 'string' && convertedArgs[merkleIdx].startsWith('0x')) {
+              convertedArgs[merkleIdx] = hexToUint8Array(convertedArgs[merkleIdx]);
             }
 
             const txResult = await signAndSubmitTransaction({
@@ -342,8 +343,9 @@ export default function DatasetDetailPage() {
       if (connected && signAndSubmitTransaction) {
         try {
           const convertedArgs = [...prepData.payload.arguments];
-          if (typeof convertedArgs[2] === 'string' && convertedArgs[2].startsWith('0x')) {
-            convertedArgs[2] = hexToUint8Array(convertedArgs[2]);
+          const merkleIdx = convertedArgs.length === 10 ? 4 : 2;
+          if (typeof convertedArgs[merkleIdx] === 'string' && convertedArgs[merkleIdx].startsWith('0x')) {
+            convertedArgs[merkleIdx] = hexToUint8Array(convertedArgs[merkleIdx]);
           }
 
           const txResult = await signAndSubmitTransaction({
