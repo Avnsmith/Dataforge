@@ -177,6 +177,78 @@ export class ShelbyLiveProvider implements ShelbyProvider {
           };
         }
 
+        // Intercept/monkey-patch coordination registerBlob call to support Shelbynet v1 10-argument function signature
+        if (clientInstance.coordination && typeof clientInstance.coordination.registerBlob === 'function') {
+          const originalRegister = clientInstance.coordination.registerBlob.bind(clientInstance.coordination);
+          clientInstance.coordination.registerBlob = async (params: any) => {
+            if (this.config.network === 'shelbynet') {
+              try {
+                const options = clientInstance.coordination.mergeOptions(params.options);
+                const { defaultErasureCodingConfig, expectedTotalChunksets } = await importSdkNode();
+                const config = params.config ?? defaultErasureCodingConfig();
+                const chunksetSize = config.chunkSizeBytes * config.erasure_k;
+                const numChunksets = expectedTotalChunksets(params.size || params.blobSize, chunksetSize);
+                
+                const functionName = options.usdSponsor !== undefined ? "register_blob_with_sponsor" : "register_blob";
+                const functionPath = `${clientInstance.coordination.deployer.toString()}::blob_metadata::${functionName}`;
+                
+                let fileMerkleBytes: Uint8Array;
+                if (params.blobMerkleRoot instanceof Uint8Array) {
+                  fileMerkleBytes = params.blobMerkleRoot;
+                } else {
+                  const merkleHex = params.blobMerkleRoot.startsWith('0x') ? params.blobMerkleRoot : `0x${params.blobMerkleRoot}`;
+                  const hexParts = merkleHex.replace(/^0x/i, '').match(/.{1,2}/g) || [];
+                  fileMerkleBytes = new Uint8Array(
+                    hexParts.map((b: string) => parseInt(b, 16))
+                  );
+                }
+
+                const functionArguments = [
+                  params.blobName,
+                  null, // description
+                  null, // content-type
+                  params.expirationMicros.toString(),
+                  fileMerkleBytes, // merkleRoot
+                  numChunksets,
+                  (params.size || params.blobSize).toString(),
+                  0,
+                  0,
+                  0
+                ];
+
+                const buildArgs = {
+                  ...options.build,
+                  options: clientInstance.coordination.orderlessTxOptions(options.build?.options),
+                  data: {
+                    function: functionPath,
+                    typeArguments: [],
+                    functionArguments
+                  },
+                  sender: params.account.accountAddress
+                };
+
+                const transaction = options.usdSponsor ? await clientInstance.coordination.aptos.transaction.build.multiAgent({
+                  ...buildArgs,
+                  secondarySignerAddresses: [options.usdSponsor.feePayerAddress]
+                }) : await clientInstance.coordination.aptos.transaction.build.simple(buildArgs);
+
+                return {
+                  transaction: await clientInstance.coordination.aptos.signAndSubmitTransaction({
+                    signer: params.account,
+                    transaction,
+                    ...options.submit
+                  })
+                };
+              } catch (err: any) {
+                console.error("[MONKEY PATCH ERROR] registerBlob failed:", err.message, err.stack);
+                return originalRegister(params);
+              }
+            } else {
+              return originalRegister(params);
+            }
+          };
+        }
+
         this.sdkClient = clientInstance;
       } catch (e: any) {
         this.recordFailure();
