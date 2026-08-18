@@ -37,7 +37,7 @@ export class ShelbyLiveProvider implements ShelbyProvider {
   // Circuit Breaker State
   private failureCount = 0;
   private circuitOpenUntil = 0;
-  private readonly failureThreshold = 5;
+  private readonly failureThreshold = 15;
   private readonly cooldownMs = 60000;
 
   constructor(config: ShelbyConfig) {
@@ -326,6 +326,9 @@ export class ShelbyLiveProvider implements ShelbyProvider {
 
       const expirationMicros = (Date.now() + 365 * 24 * 60 * 60 * 1000) * 1000;
       const sdkClient = await this.getSdkClient();
+
+      // Wait for block propagation and indexer synchronization
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
       await sdkClient.upload({
         blobData: input.fileContent,
