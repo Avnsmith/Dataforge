@@ -111,7 +111,8 @@ export class ShelbyLiveProvider implements ShelbyProvider {
                 });
                 const aptos = new Aptos(aptosConfig);
                 
-                const normalizedOwner = params.account.startsWith('0x') ? params.account : `0x${params.account}`;
+                const accountStr = typeof params.account === 'string' ? params.account : params.account.toString();
+                const normalizedOwner = accountStr.startsWith('0x') ? accountStr : `0x${accountStr}`;
                 const ownerLongWithoutPrefix = normalizedOwner.toLowerCase().replace(/^0x/i, '').padStart(64, '0');
                 const blobKey = `@${ownerLongWithoutPrefix}/${params.name}`;
                 
@@ -167,6 +168,7 @@ export class ShelbyLiveProvider implements ShelbyProvider {
                   encoding
                 };
               } catch (err: any) {
+                console.error("[MONKEY PATCH ERROR] getBlobMetadata failed:", err.message, err.stack);
                 return originalGet(params);
               }
             } else {
