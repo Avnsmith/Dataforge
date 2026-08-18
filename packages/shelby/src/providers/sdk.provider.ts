@@ -89,11 +89,18 @@ export class ShelbyLiveProvider implements ShelbyProvider {
     if (!this.sdkClient) {
       try {
         const { ShelbyNodeClient } = await importSdkNode();
+        const storageNodeUrl = this.config.rpcUrl.endsWith('/v1')
+          ? this.config.rpcUrl.substring(0, this.config.rpcUrl.length - 3) + '/shelby'
+          : this.config.rpcUrl;
+
         const clientInstance = new ShelbyNodeClient({
           network: this.config.network as any,
           apiKey: this.config.apiKey,
+          aptos: {
+            fullnode: this.config.rpcUrl,
+          },
           rpc: {
-            baseUrl: this.config.rpcUrl,
+            baseUrl: storageNodeUrl,
             apiKey: this.config.apiKey,
           },
         });
